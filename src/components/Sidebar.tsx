@@ -8,6 +8,7 @@ const links = [
   { to: '/sorvetes', label: 'Sorvetes', icon: '🟠' },
   { to: '/materias-primas', label: 'Matérias-Primas', icon: '🔵' },
   { to: '/chat', label: 'Assistente IA', icon: '🤖' },
+  { to: '/cadastro', label: 'Cadastro', icon: '📝' },
   { to: '/configuracoes', label: 'Configurações', icon: '⚙️' },
 ]
 

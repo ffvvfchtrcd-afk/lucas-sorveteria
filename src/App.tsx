@@ -10,6 +10,7 @@ import SorvetesPage from './pages/SorvetesPage'
 import MateriasPrimasPage from './pages/MateriasPrimasPage'
 import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ChatPage from './pages/ChatPage'
+import CadastroPage from './pages/CadastroPage'
 
 interface SidebarCtx {
   open: boolean
@@ -48,6 +49,7 @@ export default function App() {
               <Route path="/materias-primas" element={<MateriasPrimasPage />} />
               <Route path="/configuracoes" element={<ConfiguracoesPage />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/cadastro" element={<CadastroPage />} />
             </Routes>
           </main>
         </div>

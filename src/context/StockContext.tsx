@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { ItemEstoque, EstoqueData, LimitesItem } from '../types'
-import { carregarDados as carregarDadosBase, calcularAlerta } from '../utils/estoque'
+import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput } from '../types'
+import { carregarDados as carregarDadosBase } from '../utils/estoque'
 
-const STORAGE_KEY = 'estoque_quantidades'
+const OVERRIDES_KEY = 'estoque_quantidades'
+const CUSTOM_ITEMS_KEY = 'estoque_itens_personalizados'
 
 interface StockOverride {
   [itemId: string]: {
@@ -19,21 +20,54 @@ interface StockContextType {
   getLimites: (itemId: string, defaults: { minimo: number }) => LimitesItem
   buscarItemPorNome: (nome: string) => ItemEstoque | null
   todosItens: ItemEstoque[]
+  customItems: CustomItemInput[]
+  adicionarItemPersonalizado: (item: CustomItemInput) => void
+  removerItemPersonalizado: (itemId: string) => void
+  editarItemPersonalizado: (itemId: string, updates: Partial<CustomItemInput>) => void
 }
 
 const StockContext = createContext<StockContextType | null>(null)
 
+function getCustomItems(): CustomItemInput[] {
+  try {
+    const saved = localStorage.getItem(CUSTOM_ITEMS_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch { return [] }
+}
+
 function mergeData(overrides: StockOverride): EstoqueData {
   const base = carregarDadosBase()
+  const custom = getCustomItems()
   const merged: EstoqueData = { acai: [], sorvetes: [], materias_primas: [] }
+
   for (const cat of ['acai', 'sorvetes', 'materias_primas'] as const) {
-    merged[cat] = base[cat].map(item => {
+    const baseItems = base[cat].map(item => {
       const ovr = overrides[item.id]
       if (ovr) {
         return { ...item, quantidadeAtual: ovr.quantidadeAtual, ultimaAtualizacao: ovr.ultimaAtualizacao }
       }
       return { ...item }
     })
+
+    const customItems = custom
+      .filter(c => c.categoria === cat)
+      .map(c => {
+        const ovr = overrides[c.id]
+        const atual = ovr ? ovr.quantidadeAtual : c.quantidadeAtual
+        const ultima = ovr ? ovr.ultimaAtualizacao : new Date().toISOString().slice(0, 10)
+        return {
+          id: c.id,
+          nome: c.nome,
+          categoria: c.categoria,
+          quantidadeAtual: atual,
+          quantidadeMinima: c.quantidadeMinima,
+          unidade: c.unidade,
+          alerta: 'ok' as const,
+          ultimaAtualizacao: ultima,
+        }
+      })
+
+    merged[cat] = [...baseItems, ...customItems]
   }
   return merged
 }
@@ -41,15 +75,20 @@ function mergeData(overrides: StockOverride): EstoqueData {
 export function StockProvider({ children }: { children: ReactNode }) {
   const [overrides, setOverrides] = useState<StockOverride>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
+      const saved = localStorage.getItem(OVERRIDES_KEY)
       return saved ? JSON.parse(saved) : {}
     } catch { return {} }
   })
+  const [customItems, setCustomItems] = useState<CustomItemInput[]>(getCustomItems)
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides))
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides))
   }, [overrides])
+
+  useEffect(() => {
+    localStorage.setItem(CUSTOM_ITEMS_KEY, JSON.stringify(customItems))
+  }, [customItems])
 
   const data = mergeData(overrides)
   const todosItens = [...data.acai, ...data.sorvetes, ...data.materias_primas]
@@ -57,10 +96,10 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const adicionarQuantidade = useCallback((itemId: string, quantidade: number) => {
     setOverrides(prev => {
       const base = carregarDadosBase()
-      const todos = [...base.acai, ...base.sorvetes, ...base.materias_primas]
+      const todos = [...base.acai, ...base.sorvetes, ...base.materias_primas, ...getCustomItems()]
       const item = todos.find(i => i.id === itemId)
       if (!item) return prev
-      const atual = prev[itemId]?.quantidadeAtual ?? item.quantidadeAtual
+      const atual = prev[itemId]?.quantidadeAtual ?? ('quantidadeAtual' in item ? (item as any).quantidadeAtual : 0)
       return {
         ...prev,
         [itemId]: { quantidadeAtual: atual + quantidade, ultimaAtualizacao: new Date().toISOString().slice(0, 10) },
@@ -94,8 +133,41 @@ export function StockProvider({ children }: { children: ReactNode }) {
     ) ?? null
   }, [todosItens])
 
+  const adicionarItemPersonalizado = useCallback((item: CustomItemInput) => {
+    setCustomItems(prev => {
+      if (prev.find(c => c.id === item.id)) return prev
+      return [...prev, item]
+    })
+    setVersion(v => v + 1)
+  }, [])
+
+  const removerItemPersonalizado = useCallback((itemId: string) => {
+    setCustomItems(prev => prev.filter(c => c.id !== itemId))
+    setOverrides(prev => {
+      const next = { ...prev }
+      delete next[itemId]
+      return next
+    })
+    // also remove from limits
+    try {
+      const limits = JSON.parse(localStorage.getItem('estoque_limites') || '{}')
+      delete limits[itemId]
+      localStorage.setItem('estoque_limites', JSON.stringify(limits))
+    } catch {}
+    setVersion(v => v + 1)
+  }, [])
+
+  const editarItemPersonalizado = useCallback((itemId: string, updates: Partial<CustomItemInput>) => {
+    setCustomItems(prev => prev.map(c => c.id === itemId ? { ...c, ...updates } : c))
+    setVersion(v => v + 1)
+  }, [])
+
   return (
-    <StockContext.Provider value={{ data, version, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens }}>
+    <StockContext.Provider value={{
+      data, version, adicionarQuantidade, definirQuantidade, getLimites,
+      buscarItemPorNome, todosItens, customItems,
+      adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado
+    }}>
       {children}
     </StockContext.Provider>
   )
