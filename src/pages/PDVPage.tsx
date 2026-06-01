@@ -89,13 +89,17 @@ export default function PDVPage() {
             <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
               {itensFiltrados.map(item => {
                 const preco = getPreco(item.id)
+                const catLabel = item.categoria.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                 return (
                   <button
                     key={item.id}
                     onClick={() => addAoCarrinho(item)}
                     className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
                   >
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{item.nome}</span>
+                    <div>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">{item.nome}</span>
+                      <span className="ml-2 text-xs text-gray-400">{catLabel}</span>
+                    </div>
                     <span className="text-gray-400">{preco?.precoVenda ? `R$ ${preco.precoVenda.toFixed(2)}` : '—'}</span>
                   </button>
                 )
@@ -106,25 +110,36 @@ export default function PDVPage() {
 
         <div className="flex-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 overflow-y-auto">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Produtos Disponíveis</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {todosItens
-              .filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0)
-              .sort((a, b) => a.nome.localeCompare(b.nome))
-              .map(item => {
-                const preco = getPreco(item.id)
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => addAoCarrinho(item)}
-                    className="p-3 text-left rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-200 dark:hover:border-indigo-700 transition-all"
-                  >
-                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{item.nome}</div>
-                    <div className="text-xs text-gray-400">{item.quantidadeAtual} {item.unidade}</div>
-                    {preco?.precoVenda && <div className="text-xs font-semibold text-green-600 dark:text-green-400 mt-1">R$ {preco.precoVenda.toFixed(2)}</div>}
-                  </button>
-                )
-              })}
-          </div>
+          {(() => {
+            const vendaveis = todosItens.filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0)
+            const grupos = vendaveis.reduce((acc, item) => {
+              const cat = item.categoria.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+              if (!acc[cat]) acc[cat] = []
+              acc[cat].push(item)
+              return acc
+            }, {} as Record<string, typeof vendaveis>)
+            return Object.entries(grupos).map(([catNome, itens]) => (
+              <div key={catNome} className="mb-4 last:mb-0">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">{catNome}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {itens.map(item => {
+                    const preco = getPreco(item.id)
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => addAoCarrinho(item)}
+                        className="p-3 text-left rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-200 dark:hover:border-indigo-700 transition-all"
+                      >
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{item.nome}</div>
+                        <div className="text-xs text-gray-400">{item.quantidadeAtual} {item.unidade}</div>
+                        {preco?.precoVenda && <div className="text-xs font-semibold text-green-600 dark:text-green-400 mt-1">R$ {preco.precoVenda.toFixed(2)}</div>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          })()}
         </div>
       </div>
 
