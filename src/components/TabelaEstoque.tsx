@@ -30,29 +30,29 @@ export default function TabelaEstoque({ itens }: TabelaEstoqueProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Item</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Qtd Atual</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Mínimo</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Unidade</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Status</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Última Atualização</th>
+            <th className="text-left px-2 md:px-4 py-2 md:py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Item</th>
+            <th className="text-left px-2 md:px-4 py-2 md:py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Qtd</th>
+            <th className="text-left px-2 md:px-4 py-2 md:py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Mín</th>
+            <th className="text-left px-2 md:px-4 py-2 md:py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Un</th>
+            <th className="text-left px-2 md:px-4 py-2 md:py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Status</th>
+            <th className="text-left px-2 md:px-4 py-2 md:py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Atualiz</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {itens.map(item => (
             <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-              <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{item.nome}</td>
-              <td className={`px-4 py-3 font-semibold ${item.alerta === 'critico' ? 'text-red-600 dark:text-red-400' : item.alerta === 'baixo' ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
+              <td className="px-2 md:px-4 py-2 md:py-3 font-medium text-gray-800 dark:text-gray-200 text-xs md:text-sm">{item.nome}</td>
+              <td className={`px-2 md:px-4 py-2 md:py-3 font-semibold text-xs md:text-sm ${item.alerta === 'critico' ? 'text-red-600 dark:text-red-400' : item.alerta === 'baixo' ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
                 {item.quantidadeAtual}
               </td>
-              <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{item.quantidadeMinima}</td>
-              <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{item.unidade}</td>
-              <td className="px-4 py-3">
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${alertaStyle[item.alerta]}`}>
+              <td className="px-2 md:px-4 py-2 md:py-3 text-gray-500 dark:text-gray-400 text-xs md:text-sm">{item.quantidadeMinima}</td>
+              <td className="px-2 md:px-4 py-2 md:py-3 text-gray-500 dark:text-gray-400 text-xs md:text-sm">{item.unidade}</td>
+              <td className="px-2 md:px-4 py-2 md:py-3">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${alertaStyle[item.alerta]}`}>
                   {alertaLabel[item.alerta]}
                 </span>
               </td>
-              <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-xs">{item.ultimaAtualizacao}</td>
+              <td className="px-2 md:px-4 py-2 md:py-3 text-gray-400 dark:text-gray-600 text-xs">{item.ultimaAtualizacao}</td>
             </tr>
           ))}
         </tbody>

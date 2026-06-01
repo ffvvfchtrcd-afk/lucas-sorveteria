@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
+import { useSidebar } from '../App'
 
 const links = [
   { to: '/', label: 'Dashboard', icon: '📊' },
@@ -12,19 +13,28 @@ const links = [
 
 export default function Sidebar() {
   const { theme, toggle } = useTheme()
+  const { open, close } = useSidebar()
 
-  return (
-    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0">
-      <div className="p-5 border-b border-gray-100 dark:border-gray-800">
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">📦 Estoque</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Painel de Controle</p>
+  const content = (
+    <aside className="h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0">
+      <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">📦 Estoque</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Painel de Controle</p>
+        </div>
+        <button onClick={close} className="md:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" aria-label="Fechar menu">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {links.map(link => (
           <NavLink
             key={link.to}
             to={link.to}
             end={link.to === '/'}
+            onClick={close}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -46,8 +56,23 @@ export default function Sidebar() {
           <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
           {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
         </button>
-        <p className="text-xs text-gray-400 dark:text-gray-600 px-4">Dashboard Estoque v3.0</p>
+        <p className="text-xs text-gray-400 dark:text-gray-600 px-4">Dashboard v3.0</p>
       </div>
     </aside>
+  )
+
+  return (
+    <>
+      {/* Desktop: fixed sidebar */}
+      <div className="hidden md:flex">{content}</div>
+
+      {/* Mobile: overlay drawer */}
+      {open && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={close} />
+          <div className="absolute left-0 top-0 h-full shadow-xl animate-slide-in">{content}</div>
+        </div>
+      )}
+    </>
   )
 }

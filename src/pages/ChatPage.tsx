@@ -294,7 +294,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === 'user'
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+      <div className={`max-w-[95%] md:max-w-[80%] rounded-2xl px-3 md:px-4 py-3 ${
         isUser
           ? 'bg-indigo-600 text-white rounded-br-md'
           : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-bl-md shadow-sm dark:shadow-black/20'
@@ -435,7 +435,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)]">
+    <div className="flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-6rem)]">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">🤖 Assistente IA</h1>

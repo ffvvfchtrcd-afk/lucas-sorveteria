@@ -47,52 +47,50 @@ function LinhaItem({
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.nome}</td>
-      <td className="px-4 py-3 text-sm text-gray-500">{item.quantidadeAtual} {item.unidade}</td>
-      <td className="px-4 py-3">
+      <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium text-gray-800 dark:text-gray-200">{item.nome}</td>
+      <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-500">{item.quantidadeAtual} {item.unidade}</td>
+      <td className="px-2 md:px-4 py-2 md:py-3">
         {editando ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <input
               type="number"
               value={minimo}
               onChange={e => setMinimo(Number(e.target.value))}
-              className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-16 md:w-20 px-1 md:px-2 py-1 text-xs md:text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
-            <span className="text-xs text-gray-400">{item.unidade}</span>
           </div>
         ) : (
-          <span className={`text-sm font-medium ${item.quantidadeAtual <= item.critico ? 'text-red-600' : item.quantidadeAtual <= item.minimo ? 'text-yellow-600' : 'text-gray-700'}`}>
-            {item.minimo} {item.unidade}
+          <span className={`text-xs md:text-sm font-medium ${item.quantidadeAtual <= item.critico ? 'text-red-600 dark:text-red-400' : item.quantidadeAtual <= item.minimo ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            {item.minimo}
           </span>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-2 md:px-4 py-2 md:py-3">
         {editando ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <input
               type="number"
               value={critico}
               onChange={e => setCritico(Number(e.target.value))}
-              className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="w-16 md:w-20 px-1 md:px-2 py-1 text-xs md:text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
             />
-            <span className="text-xs text-gray-400">{item.unidade}</span>
           </div>
         ) : (
-          <span className={`text-sm font-medium ${item.quantidadeAtual <= item.critico ? 'text-red-600' : 'text-gray-700'}`}>
-            {item.critico} {item.unidade}
+          <span className={`text-xs md:text-sm font-medium ${item.quantidadeAtual <= item.critico ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            {item.critico}
           </span>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-2 md:px-4 py-2 md:py-3">
         {editando ? (
           <div className="flex items-center gap-1">
-            <button onClick={salvar} className="px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Salvar</button>
-            <button onClick={() => setEditando(false)} className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">Cancelar</button>
+            <button onClick={salvar} className="px-2 md:px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">✓</button>
+            <button onClick={() => setEditando(false)} className="px-2 md:px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">✕</button>
           </div>
         ) : (
           <div className="flex items-center gap-1">
-            <button onClick={() => setEditando(true)} className="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100">Editar</button>
-            <button onClick={() => { onResetar(item.id); setEditando(false); }} className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50 rounded-md hover:bg-gray-100">Resetar</button>
+            <button onClick={() => setEditando(true)} className="px-2 md:px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 rounded-md hover:bg-indigo-100">Editar</button>
+            <button onClick={() => { onResetar(item.id); setEditando(false); }} className="px-2 md:px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">↺</button>
           </div>
         )}
       </td>
@@ -157,20 +155,20 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">⚙️ Configurações</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">⚙️ Configurações</h1>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
             Defina os limites de estoque para cada item
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           {salvo && (
             <span className="text-sm text-green-600 font-medium animate-pulse">✓ Salvo!</span>
           )}
           <button
             onClick={aplicarTodas}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+            className="px-3 md:px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Salvar Todas
           </button>
@@ -183,7 +181,7 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1 scrollbar-thin">
         {categorias.map(cat => (
           <button
             key={cat.slug}
@@ -204,15 +202,15 @@ export default function ConfiguracoesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Item</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Atual</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">
-                  Mínimo <span className="text-yellow-500">(baixo)</span>
+                <th className="text-left px-2 md:px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Item</th>
+                <th className="text-left px-2 md:px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Atual</th>
+                <th className="text-left px-2 md:px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">
+                  <span className="hidden md:inline">Mínimo </span><span className="text-yellow-500">(baixo)</span>
                 </th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                  Crítico <span className="text-red-500">(repor)</span>
+                <th className="text-left px-2 md:px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">
+                  <span className="hidden md:inline">Crítico </span><span className="text-red-500">(repor)</span>
                 </th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Ações</th>
+                <th className="text-left px-2 md:px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 text-xs md:text-sm">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
