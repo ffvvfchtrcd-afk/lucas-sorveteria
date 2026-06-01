@@ -106,7 +106,7 @@ export default function ConfiguracoesPage() {
   const [salvo, setSalvo] = useState(false);
 
   useEffect(() => {
-    const todos = [...stockData.acai, ...stockData.sorvetes, ...stockData.materias_primas];
+    const todos = [...stockData.acai, ...stockData.sorvetes, ...stockData.materias_primas, ...stockData.personalizados];
     const formatados: ItemFormState[] = todos.map(item => {
       const limites = getLimites(item.id, { minimo: item.quantidadeMinima });
       return {

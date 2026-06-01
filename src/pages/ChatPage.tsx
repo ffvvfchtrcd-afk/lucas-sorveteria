@@ -2,8 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useStock } from '../context/StockContext'
+import { useLog } from '../context/LogContext'
+import { usePreco } from '../context/PrecoContext'
+import { useValidade } from '../context/ValidadeContext'
 import { chatCompletionWithRetry, Message, ToolCall, ToolDefinition } from '../services/openrouter'
-import { ItemEstoque, LimitesItem, EstoqueData } from '../types'
+import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES } from '../types'
 
 const API_KEY_STORAGE = 'openrouter_key';
 
@@ -17,6 +20,16 @@ interface ChatMessage {
 function gerarSistema(data: EstoqueData, getLimites: (id: string, d: { minimo: number }) => LimitesItem): string {
   const todos = [...data.acai, ...data.sorvetes, ...data.materias_primas]
   const agora = new Date().toISOString().slice(0, 10)
+
+  const criticos = todos.filter(i => {
+    const lim = getLimites(i.id, { minimo: i.quantidadeMinima })
+    return i.quantidadeAtual <= lim.critico
+  })
+
+  const baixos = todos.filter(i => {
+    const lim = getLimites(i.id, { minimo: i.quantidadeMinima })
+    return i.quantidadeAtual > lim.critico && i.quantidadeAtual <= lim.minimo
+  })
 
   const inventario = todos.map(item => {
     const lim = getLimites(item.id, { minimo: item.quantidadeMinima })
@@ -32,6 +45,17 @@ Data de hoje: ${agora}
 ## INVENTÁRIO ATUAL:
 ${inventario}
 
+## RESUMO RÁPIDO
+- ${criticos.length} itens em estado CRÍTICO 🔴
+- ${baixos.length} itens com estoque BAIXO 🟡
+- ${todos.length - criticos.length - baixos.length} itens OK 🟢
+
+## SEJA PROATIVO
+- Se o usuário abrir o chat sem mensagem, faça uma saudação e já sugira ações com base no estado do estoque
+- Ex: "Olá! Hoje temos X itens críticos e Y itens baixos. Quer que eu monte uma lista de compras?"
+- Se notar itens críticos, já sugira providências
+- Se o usuário perguntar de forma vaga, faça perguntas direcionadas
+
 ## COMANDOS DISPONÍVEIS
 Você TEM acesso a funções para consultar e MODIFICAR o estoque real. Use-as quando o usuário:
 
@@ -39,6 +63,9 @@ Você TEM acesso a funções para consultar e MODIFICAR o estoque real. Use-as q
 2. **Reportar entrada de mercadoria** → use adicionar_estoque (EX: "chegou 50L de leite")
 3. **Reportar uso/venda/perda** → use definir_estoque para definir valor exato
 4. **Quiser resumo do que falta** → use listar_criticos e listar_baixos
+5. **CRIAR novo produto** → use criar_item! Você PODE criar produtos com qualquer nome e qualquer categoria (inclusive categorias novas que não existem ainda)
+   - Ex: "crie um produto Morango Unidade na categoria frutas" → use criar_item com nome="Morango Unidade", categoria="frutas"
+   - Depois de criar, informe o usuário e pergunte se deseja adicionar quantidade
 
 ## REGRAS DE FORMATAÇÃO (IMPORTANTE):
 - Use **Markdown** para formatar suas respostas de forma organizada e visual
@@ -147,6 +174,24 @@ function buildTools(todos: ItemEstoque[]): ToolDefinition[] {
     {
       type: 'function',
       function: {
+        name: 'criar_item',
+        description: 'CRIA um novo produto no estoque com nome, categoria, unidade, quantidade inicial e mínima. Use quando o usuário pedir para cadastrar um novo produto.',
+        parameters: {
+          type: 'object',
+          properties: {
+            nome: { type: 'string', description: 'Nome do novo produto' },
+            categoria: { type: 'string', description: 'Categoria do produto (ex: acai, sorvetes, materias_primas, frutas, etc). Pode ser uma categoria nova.' },
+            unidade: { type: 'string', enum: ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo'], description: 'Unidade de medida' },
+            quantidade_inicial: { type: 'number', description: 'Quantidade inicial em estoque' },
+            quantidade_minima: { type: 'number', description: 'Quantidade mínima (gatilho de alerta)' },
+          },
+          required: ['nome', 'categoria', 'unidade', 'quantidade_inicial', 'quantidade_minima'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
         name: 'resumo_para_compras',
         description: 'Gera um resumo organizado de tudo que precisa ser comprado, separado por categoria',
         parameters: { type: 'object', properties: {} },
@@ -161,7 +206,9 @@ function executarTool(
   definirQuantidade: (id: string, qtd: number) => void,
   getLimites: (id: string, d: { minimo: number }) => LimitesItem,
   buscarItemPorNome: (nome: string) => ItemEstoque | null,
-  todosItens: ItemEstoque[]
+  todosItens: ItemEstoque[],
+  addLog?: (tipo: string, itemId: string, itemNome: string, quantidade: number, origem?: string) => void,
+  adicionarItemPersonalizado?: (item: CustomItemInput) => void,
 ): string {
   const args = JSON.parse(toolCall.function.arguments)
 
@@ -212,6 +259,7 @@ function executarTool(
 
       const atualAntes = item.quantidadeAtual
       adicionarQuantidade(id, qtd)
+      addLog?.('entrada', id, item.nome, qtd, 'Chat IA')
 
       return JSON.stringify({
         sucesso: true,
@@ -230,11 +278,43 @@ function executarTool(
 
       const atualAntes = item.quantidadeAtual
       definirQuantidade(id, qtd)
+      const tipo = qtd < atualAntes ? 'saida' : 'ajuste'
+      addLog?.(tipo, id, item.nome, qtd - atualAntes, 'Chat IA')
 
       return JSON.stringify({
         sucesso: true,
         mensagem: `✅ "${item.nome}" atualizado. Antes: ${atualAntes} ${item.unidade}, Agora: ${qtd} ${item.unidade}`,
         item: item.nome, quantidade_anterior: atualAntes, quantidade_nova: qtd, unidade: item.unidade
+      })
+    }
+
+    case 'criar_item': {
+      const nome = args.nome?.trim()
+      const categoria = args.categoria?.trim().toLowerCase().replace(/\s+/g, '_')
+      const unidade = args.unidade
+      const qtdInicial = Number(args.quantidade_inicial) || 0
+      const qtdMinima = Number(args.quantidade_minima) || 10
+      const unidadesValidas = ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo']
+
+      if (!nome) return JSON.stringify({ erro: 'Nome do produto é obrigatório' })
+      if (!unidadesValidas.includes(unidade)) return JSON.stringify({ erro: `Unidade inválida. Use: ${unidadesValidas.join(', ')}` })
+
+      const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
+      const novoItem: CustomItemInput = {
+        id,
+        nome,
+        categoria,
+        quantidadeAtual: qtdInicial,
+        quantidadeMinima: qtdMinima,
+        unidade,
+      }
+      adicionarItemPersonalizado?.(novoItem)
+      addLog?.('entrada', id, nome, qtdInicial, 'Chat IA', 'Criação de novo item')
+
+      return JSON.stringify({
+        sucesso: true,
+        mensagem: `✅ Novo item criado!\nNome: ${nome}\nCategoria: ${categoria}\nUnidade: ${unidade}\nQuantidade inicial: ${qtdInicial}\nQuantidade mínima: ${qtdMinima}`,
+        item: { id, nome, categoria, unidade, quantidade_inicial: qtdInicial, quantidade_minima: qtdMinima },
       })
     }
 
@@ -322,7 +402,8 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
 }
 
 export default function ChatPage() {
-  const { data, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens } = useStock()
+  const { data, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, adicionarItemPersonalizado } = useStock()
+  const { addLog } = useLog()
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '')
   const [keyInput, setKeyInput] = useState(apiKey)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -330,10 +411,38 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [conversation, setConversation] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const proativoFeito = useRef(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // IA proativa - saudação automática ao abrir o chat
+  useEffect(() => {
+    if (proativoFeito.current || !apiKey || messages.length > 0) return
+    proativoFeito.current = true
+
+    const timeout = setTimeout(async () => {
+      const systemContent = gerarSistema(data, getLimites)
+      const tools = buildTools(todosItens)
+      const history: Message[] = [
+        { role: 'system', content: systemContent + '\n\nFaça uma saudação proativa! Analise o estoque e sugira ações com base no estado atual. Seja educado e direto.' },
+      ]
+
+      try {
+        const result = await chatCompletionWithRetry({ messages: history, tools, apiKey })
+        if (result.message.content) {
+          const aiMsg: ChatMessage = { id: Date.now().toString(), role: 'assistant', content: result.message.content, timestamp: new Date() }
+          setMessages([aiMsg])
+          setConversation([{ role: 'assistant', content: result.message.content }])
+        }
+      } catch {
+        // Silently fail - user can still type
+      }
+    }, 600)
+
+    return () => clearTimeout(timeout)
+  }, [apiKey])
 
   function salvarKey() {
     const trimmed = keyInput.trim()
@@ -367,7 +476,7 @@ export default function ChatPage() {
         history.push(result.message)
 
         for (const tc of result.toolCalls) {
-          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens)
+          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado)
           history.push({ role: 'tool', content: toolResult, tool_call_id: tc.id })
         }
 

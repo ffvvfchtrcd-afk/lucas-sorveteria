@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStock } from '../context/StockContext'
-import { CategoriaSlug, CustomItemInput, CATEGORIAS, UNIDADES, UnidadeMedida } from '../types'
+import { CategoriaSlug, CustomItemInput, CATEGORIAS_BASE, UNIDADES, UnidadeMedida } from '../types'
 
 export default function CadastroPage() {
   const { customItems, adicionarItemPersonalizado, removerItemPersonalizado } = useStock()
@@ -76,7 +76,7 @@ export default function CadastroPage() {
               onChange={e => setCategoria(e.target.value as CategoriaSlug)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
-              {CATEGORIAS.map(cat => (
+              {CATEGORIAS_BASE.map(cat => (
                 <option key={cat.slug} value={cat.slug}>{cat.icone} {cat.nome}</option>
               ))}
             </select>
@@ -156,7 +156,7 @@ export default function CadastroPage() {
                 {customItems.map(item => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{item.nome}</td>
-                    <td className="px-4 py-3 text-gray-500">{CATEGORIAS.find(c => c.slug === item.categoria)?.nome ?? item.categoria}</td>
+                    <td className="px-4 py-3 text-gray-500">{CATEGORIAS_BASE.find(c => c.slug === item.categoria)?.nome ?? item.categoria}</td>
                     <td className="px-4 py-3 text-gray-500">{item.unidade}</td>
                     <td className="px-4 py-3 text-gray-500">{item.quantidadeAtual}</td>
                     <td className="px-4 py-3 text-gray-500">{item.quantidadeMinima}</td>

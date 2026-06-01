@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput } from '../types'
+import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput, CATEGORIAS_BASE } from '../types'
 import { carregarDados as carregarDadosBase } from '../utils/estoque'
 
 const OVERRIDES_KEY = 'estoque_quantidades'
@@ -35,10 +35,12 @@ function getCustomItems(): CustomItemInput[] {
   } catch { return [] }
 }
 
+const CATEGORIAS_CONHECIDAS = CATEGORIAS_BASE.map(c => c.slug)
+
 function mergeData(overrides: StockOverride): EstoqueData {
   const base = carregarDadosBase()
   const custom = getCustomItems()
-  const merged: EstoqueData = { acai: [], sorvetes: [], materias_primas: [] }
+  const merged: EstoqueData = { acai: [], sorvetes: [], materias_primas: [], personalizados: [] }
 
   for (const cat of ['acai', 'sorvetes', 'materias_primas'] as const) {
     const baseItems = base[cat].map(item => {
@@ -48,27 +50,33 @@ function mergeData(overrides: StockOverride): EstoqueData {
       }
       return { ...item }
     })
-
-    const customItems = custom
-      .filter(c => c.categoria === cat)
-      .map(c => {
-        const ovr = overrides[c.id]
-        const atual = ovr ? ovr.quantidadeAtual : c.quantidadeAtual
-        const ultima = ovr ? ovr.ultimaAtualizacao : new Date().toISOString().slice(0, 10)
-        return {
-          id: c.id,
-          nome: c.nome,
-          categoria: c.categoria,
-          quantidadeAtual: atual,
-          quantidadeMinima: c.quantidadeMinima,
-          unidade: c.unidade,
-          alerta: 'ok' as const,
-          ultimaAtualizacao: ultima,
-        }
-      })
-
-    merged[cat] = [...baseItems, ...customItems]
+    merged[cat] = baseItems
   }
+
+  for (const c of custom) {
+    const ovr = overrides[c.id]
+    const atual = ovr ? ovr.quantidadeAtual : c.quantidadeAtual
+    const ultima = ovr ? ovr.ultimaAtualizacao : new Date().toISOString().slice(0, 10)
+    const item: ItemEstoque = {
+      id: c.id,
+      nome: c.nome,
+      categoria: c.categoria,
+      quantidadeAtual: atual,
+      quantidadeMinima: c.quantidadeMinima,
+      unidade: c.unidade,
+      alerta: 'ok',
+      ultimaAtualizacao: ultima,
+    }
+    if (CATEGORIAS_CONHECIDAS.includes(c.categoria)) {
+      merged[c.categoria as keyof EstoqueData] = [
+        ...(merged[c.categoria as keyof EstoqueData] as ItemEstoque[]),
+        item,
+      ]
+    } else {
+      merged.personalizados.push(item)
+    }
+  }
+
   return merged
 }
 
@@ -91,7 +99,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   }, [customItems])
 
   const data = mergeData(overrides)
-  const todosItens = [...data.acai, ...data.sorvetes, ...data.materias_primas]
+  const todosItens = [...data.acai, ...data.sorvetes, ...data.materias_primas, ...data.personalizados]
 
   const adicionarQuantidade = useCallback((itemId: string, quantidade: number) => {
     setOverrides(prev => {
@@ -148,7 +156,6 @@ export function StockProvider({ children }: { children: ReactNode }) {
       delete next[itemId]
       return next
     })
-    // also remove from limits
     try {
       const limits = JSON.parse(localStorage.getItem('estoque_limites') || '{}')
       delete limits[itemId]

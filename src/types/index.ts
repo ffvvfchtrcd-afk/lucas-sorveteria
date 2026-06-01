@@ -1,11 +1,12 @@
 export type UnidadeMedida = 'L' | 'mL' | 'g' | 'kg' | 'un' | 'cx' | 'pct' | 'fardo';
 export type AlertaNivel = 'ok' | 'baixo' | 'critico';
 export type CategoriaSlug = 'acai' | 'sorvetes' | 'materias_primas';
+export type TipoMovimentacao = 'entrada' | 'saida' | 'venda' | 'producao' | 'perda' | 'ajuste';
 
 export interface ItemEstoque {
   id: string;
   nome: string;
-  categoria: CategoriaSlug;
+  categoria: string;
   quantidadeAtual: number;
   quantidadeMinima: number;
   unidade: UnidadeMedida;
@@ -16,7 +17,7 @@ export interface ItemEstoque {
 export interface CustomItemInput {
   id: string;
   nome: string;
-  categoria: CategoriaSlug;
+  categoria: string;
   quantidadeAtual: number;
   quantidadeMinima: number;
   unidade: UnidadeMedida;
@@ -31,6 +32,7 @@ export interface EstoqueData {
   acai: ItemEstoque[];
   sorvetes: ItemEstoque[];
   materias_primas: ItemEstoque[];
+  personalizados: ItemEstoque[];
 }
 
 export interface ResumoCategoria {
@@ -44,7 +46,59 @@ export interface ResumoCategoria {
   icone: string;
 }
 
-export const CATEGORIAS: { slug: CategoriaSlug; nome: string; icone: string; cor: string }[] = [
+export interface Movimentacao {
+  id: string;
+  itemId: string;
+  itemNome: string;
+  tipo: TipoMovimentacao;
+  quantidade: number;
+  data: string;
+  motivo?: string;
+  origem?: string;
+}
+
+export interface PrecoItem {
+  itemId: string;
+  itemNome: string;
+  precoCusto: number;
+  precoVenda: number;
+  dataAtualizacao: string;
+}
+
+export interface LoteValidade {
+  id: string;
+  itemId: string;
+  itemNome: string;
+  quantidade: number;
+  dataValidade: string;
+  dataEntrada: string;
+  observacao?: string;
+}
+
+export interface VendaItem {
+  itemId: string;
+  itemNome: string;
+  quantidade: number;
+  precoUnitario: number;
+  subtotal: number;
+}
+
+export interface Venda {
+  id: string;
+  itens: VendaItem[];
+  total: number;
+  data: string;
+}
+
+export interface ProducaoRegistro {
+  id: string;
+  nome: string;
+  ingredientes: { itemId: string; itemNome: string; quantidade: number }[];
+  resultados: { itemId: string; itemNome: string; quantidade: number }[];
+  data: string;
+}
+
+export const CATEGORIAS_BASE: { slug: string; nome: string; icone: string; cor: string }[] = [
   { slug: 'acai', nome: 'Açaí', icone: '🟣', cor: '#7B2D8E' },
   { slug: 'sorvetes', nome: 'Sorvetes', icone: '🟠', cor: '#E07B39' },
   { slug: 'materias_primas', nome: 'Matérias-Primas', icone: '🔵', cor: '#2E86AB' },
@@ -60,3 +114,8 @@ export const UNIDADES: { value: UnidadeMedida; label: string }[] = [
   { value: 'pct', label: 'Pacotes (pct)' },
   { value: 'fardo', label: 'Fardos (fardo)' },
 ];
+
+export function getIconeCategoria(slug: string): string {
+  const found = CATEGORIAS_BASE.find(c => c.slug === slug)
+  return found ? found.icone : '📂'
+}
