@@ -8,6 +8,7 @@ export function carregarDados(): EstoqueData {
     acai: (acaiData as ItemEstoque[]).map(i => ({ ...i, alerta: 'ok' })),
     sorvetes: (sorvetesData as ItemEstoque[]).map(i => ({ ...i, alerta: 'ok' })),
     materias_primas: (materiasPrimasData as ItemEstoque[]).map(i => ({ ...i, alerta: 'ok' })),
+    personalizados: [],
   };
 }
 
