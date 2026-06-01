@@ -1,5 +1,5 @@
 import { useState, createContext, useContext } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { StockProvider } from './context/StockContext'
 import { ConfigProvider } from './context/ConfigContext'
@@ -8,6 +8,7 @@ import { PrecoProvider } from './context/PrecoContext'
 import { ValidadeProvider } from './context/ValidadeContext'
 import Sidebar from './components/Sidebar'
 import BuscaGlobal from './components/BuscaGlobal'
+import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import AcaiPage from './pages/AcaiPage'
 import SorvetesPage from './pages/SorvetesPage'
@@ -34,6 +35,9 @@ export const useSidebar = () => useContext(SidebarContext)
 
 export default function App() {
   const [open, setOpen] = useState(false)
+  const location = useLocation()
+
+  const isHome = location.pathname === '/'
 
   return (
     <ThemeProvider>
@@ -43,43 +47,37 @@ export default function App() {
     <ValidadeProvider>
       <ConfigProvider>
         <SidebarContext.Provider value={{ open, toggle: () => setOpen(v => !v), close: () => setOpen(false) }}>
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-950 dark:text-gray-100">
-          <Sidebar />
-          <main className="flex-1 min-w-0 overflow-y-auto p-4 md:p-6 lg:p-8">
-            <div className="flex items-center justify-between mb-3 md:hidden">
-              <button
-                onClick={() => setOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Abrir menu"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <span className="text-xs">Menu</span>
-              </button>
-              <BuscaGlobal />
-            </div>
-            <div className="hidden md:flex justify-end mb-3">
-              <BuscaGlobal />
-            </div>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/acai" element={<AcaiPage />} />
-              <Route path="/sorvetes" element={<SorvetesPage />} />
-              <Route path="/materias-primas" element={<MateriasPrimasPage />} />
-              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/cadastro" element={<CadastroPage />} />
-              <Route path="/pdv" element={<PDVPage />} />
-              <Route path="/producao" element={<ProducaoPage />} />
-              <Route path="/movimentacoes" element={<MovimentacoesPage />} />
-              <Route path="/precos" element={<PrecosPage />} />
-              <Route path="/validades" element={<ValidadesPage />} />
-              <Route path="/relatorios" element={<RelatoriosPage />} />
-              <Route path="/categoria/:slug" element={<CategoriaPage />} />
-            </Routes>
-          </main>
-        </div>
+        {isHome ? (
+          <Home />
+        ) : (
+          <div className="flex flex-col md:flex-row h-dvh bg-gray-50 dark:bg-gray-950 dark:text-gray-100">
+            <Sidebar />
+            <main className="flex-1 min-w-0 overflow-y-auto p-3 pb-2 md:p-6 lg:p-8">
+              <div className="hidden md:flex justify-end mb-3">
+                <BuscaGlobal />
+              </div>
+              <div key={location.pathname} className="animate-fadeIn">
+              <Routes>
+                <Route path="/estoque" element={<Dashboard />} />
+                <Route path="/estoque/acai" element={<AcaiPage />} />
+                <Route path="/estoque/sorvetes" element={<SorvetesPage />} />
+                <Route path="/estoque/materias-primas" element={<MateriasPrimasPage />} />
+                <Route path="/estoque/configuracoes" element={<ConfiguracoesPage />} />
+                <Route path="/estoque/chat" element={<ChatPage />} />
+                <Route path="/estoque/cadastro" element={<CadastroPage />} />
+                <Route path="/estoque/producao" element={<ProducaoPage />} />
+                <Route path="/estoque/precos" element={<PrecosPage />} />
+                <Route path="/estoque/validades" element={<ValidadesPage />} />
+                <Route path="/estoque/categoria/:slug" element={<CategoriaPage />} />
+
+                <Route path="/caixa/pdv" element={<PDVPage />} />
+                <Route path="/caixa/movimentacoes" element={<MovimentacoesPage />} />
+                <Route path="/caixa/relatorios" element={<RelatoriosPage />} />
+              </Routes>
+              </div>
+            </main>
+          </div>
+        )}
         </SidebarContext.Provider>
       </ConfigProvider>
     </ValidadeProvider>

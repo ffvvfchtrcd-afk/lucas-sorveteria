@@ -12,9 +12,14 @@ export default {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(0)' },
         },
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'slide-in': 'slide-in 0.2s ease-out',
+        'fadeIn': 'fade-in 0.2s ease-out',
       },
     },
   },

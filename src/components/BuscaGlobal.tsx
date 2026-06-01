@@ -55,7 +55,7 @@ export default function BuscaGlobal() {
       setSelectedIndex(i => Math.max(i - 1, 0))
     } else if (e.key === 'Enter' && resultados[selectedIndex]) {
       const item = resultados[selectedIndex]
-      const path = item.categoria === 'acai' ? '/acai' : item.categoria === 'sorvetes' ? '/sorvetes' : '/materias-primas'
+      const path = item.categoria === 'acai' ? '/estoque/acai' : item.categoria === 'sorvetes' ? '/estoque/sorvetes' : '/estoque/materias-primas'
       navegar(path)
     }
   }
