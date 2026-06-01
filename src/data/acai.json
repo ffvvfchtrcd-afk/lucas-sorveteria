@@ -1,0 +1,14 @@
+[
+  { "id": "acai-001", "nome": "Polpa de Açaí Médio", "categoria": "acai", "quantidadeAtual": 45, "quantidadeMinima": 20, "unidade": "L", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
+  { "id": "acai-002", "nome": "Polpa de Açaí Groselha", "categoria": "acai", "quantidadeAtual": 12, "quantidadeMinima": 15, "unidade": "L", "alerta": "baixo", "ultimaAtualizacao": "2026-05-28" },
+  { "id": "acai-003", "nome": "Xarope de Guaraná", "categoria": "acai", "quantidadeAtual": 8, "quantidadeMinima": 10, "unidade": "L", "alerta": "baixo", "ultimaAtualizacao": "2026-05-25" },
+  { "id": "acai-004", "nome": "Copo 500ml", "categoria": "acai", "quantidadeAtual": 320, "quantidadeMinima": 100, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
+  { "id": "acai-005", "nome": "Copo 300ml", "categoria": "acai", "quantidadeAtual": 45, "quantidadeMinima": 100, "unidade": "un", "alerta": "critico", "ultimaAtualizacao": "2026-05-20" },
+  { "id": "acai-006", "nome": "Tampa para Copo 500ml", "categoria": "acai", "quantidadeAtual": 280, "quantidadeMinima": 100, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
+  { "id": "acai-007", "nome": "Tampa para Copo 300ml", "categoria": "acai", "quantidadeAtual": 60, "quantidadeMinima": 100, "unidade": "un", "alerta": "baixo", "ultimaAtualizacao": "2026-05-22" },
+  { "id": "acai-008", "nome": "Leite Condensado (lata)", "categoria": "acai", "quantidadeAtual": 3, "quantidadeMinima": 12, "unidade": "un", "alerta": "critico", "ultimaAtualizacao": "2026-05-18" },
+  { "id": "acai-009", "nome": "Granola 1kg", "categoria": "acai", "quantidadeAtual": 4, "quantidadeMinima": 5, "unidade": "pct", "alerta": "baixo", "ultimaAtualizacao": "2026-05-27" },
+  { "id": "acai-010", "nome": "Leite Ninho 400g", "categoria": "acai", "quantidadeAtual": 2, "quantidadeMinima": 6, "unidade": "un", "alerta": "critico", "ultimaAtualizacao": "2026-05-15" },
+  { "id": "acai-011", "nome": "Banana (cacho)", "categoria": "acai", "quantidadeAtual": 8, "quantidadeMinima": 5, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
+  { "id": "acai-012", "nome": "Morango (bandeja)", "categoria": "acai", "quantidadeAtual": 2, "quantidadeMinima": 4, "unidade": "cx", "alerta": "baixo", "ultimaAtualizacao": "2026-05-29" }
+]

@@ -1,0 +1,245 @@
+import { useState, useEffect } from 'react'
+import { useStock } from '../context/StockContext'
+import { useConfig } from '../context/ConfigContext'
+import { CategoriaSlug, LimitesItem, ItemEstoque } from '../types'
+
+type FiltroCategoria = CategoriaSlug | 'todas';
+
+const categorias: { slug: FiltroCategoria; nome: string }[] = [
+  { slug: 'todas', nome: 'Todas' },
+  { slug: 'acai', nome: 'Açaí' },
+  { slug: 'sorvetes', nome: 'Sorvetes' },
+  { slug: 'materias_primas', nome: 'Matérias-Primas' },
+];
+
+interface ItemFormState {
+  id: string;
+  nome: string;
+  categoria: CategoriaSlug;
+  quantidadeAtual: number;
+  minimo: number;
+  critico: number;
+  unidade: string;
+}
+
+function LinhaItem({
+  item,
+  onSalvar,
+  onResetar,
+}: {
+  item: ItemFormState;
+  onSalvar: (id: string, limites: LimitesItem) => void;
+  onResetar: (id: string) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [minimo, setMinimo] = useState(item.minimo);
+  const [critico, setCritico] = useState(item.critico);
+
+  useEffect(() => {
+    setMinimo(item.minimo);
+    setCritico(item.critico);
+  }, [item.minimo, item.critico]);
+
+  function salvar() {
+    onSalvar(item.id, { minimo, critico });
+    setEditando(false);
+  }
+
+  return (
+    <tr className="hover:bg-gray-50 transition-colors">
+      <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.nome}</td>
+      <td className="px-4 py-3 text-sm text-gray-500">{item.quantidadeAtual} {item.unidade}</td>
+      <td className="px-4 py-3">
+        {editando ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={minimo}
+              onChange={e => setMinimo(Number(e.target.value))}
+              className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <span className="text-xs text-gray-400">{item.unidade}</span>
+          </div>
+        ) : (
+          <span className={`text-sm font-medium ${item.quantidadeAtual <= item.critico ? 'text-red-600' : item.quantidadeAtual <= item.minimo ? 'text-yellow-600' : 'text-gray-700'}`}>
+            {item.minimo} {item.unidade}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {editando ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={critico}
+              onChange={e => setCritico(Number(e.target.value))}
+              className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+            <span className="text-xs text-gray-400">{item.unidade}</span>
+          </div>
+        ) : (
+          <span className={`text-sm font-medium ${item.quantidadeAtual <= item.critico ? 'text-red-600' : 'text-gray-700'}`}>
+            {item.critico} {item.unidade}
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {editando ? (
+          <div className="flex items-center gap-1">
+            <button onClick={salvar} className="px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Salvar</button>
+            <button onClick={() => setEditando(false)} className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">Cancelar</button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button onClick={() => setEditando(true)} className="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100">Editar</button>
+            <button onClick={() => { onResetar(item.id); setEditando(false); }} className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50 rounded-md hover:bg-gray-100">Resetar</button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+export default function ConfiguracoesPage() {
+  const { getLimites, salvarLimite, resetarLimite, salvarLimitesMultiplos } = useConfig();
+  const { data: stockData, version: stockVersion } = useStock();
+  const [itens, setItens] = useState<ItemFormState[]>([]);
+  const [filtro, setFiltro] = useState<FiltroCategoria>('todas');
+  const [salvo, setSalvo] = useState(false);
+
+  useEffect(() => {
+    const todos = [...stockData.acai, ...stockData.sorvetes, ...stockData.materias_primas];
+    const formatados: ItemFormState[] = todos.map(item => {
+      const limites = getLimites(item.id, { minimo: item.quantidadeMinima });
+      return {
+        id: item.id,
+        nome: item.nome,
+        categoria: item.categoria,
+        quantidadeAtual: item.quantidadeAtual,
+        minimo: limites.minimo,
+        critico: limites.critico,
+        unidade: item.unidade,
+      };
+    });
+    setItens(formatados);
+  }, [getLimites, stockVersion, stockData]);
+
+  function handleSalvar(id: string, limites: LimitesItem) {
+    salvarLimite(id, limites);
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 2000);
+  }
+
+  function handleResetar(id: string) {
+    resetarLimite(id);
+    setItens(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      const itemOriginal = [...stockData.acai, ...stockData.sorvetes, ...stockData.materias_primas].find(x => x.id === id);
+      const minimoPadrao = itemOriginal?.quantidadeMinima ?? i.minimo;
+      return { ...i, minimo: minimoPadrao, critico: Math.max(1, Math.round(minimoPadrao * 0.4)) };
+    }));
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 2000);
+  }
+
+  function aplicarTodas() {
+    const updates = itens.map(i => ({
+      id: i.id,
+      limites: { minimo: i.minimo, critico: i.critico } as LimitesItem,
+    }));
+    salvarLimitesMultiplos(updates);
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 2000);
+  }
+
+  const filtrados = filtro === 'todas' ? itens : itens.filter(i => i.categoria === filtro);
+  const linhasEditadas = itens.filter(i => i.critico >= i.minimo);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">⚙️ Configurações</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            Defina os limites de estoque para cada item
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {salvo && (
+            <span className="text-sm text-green-600 font-medium animate-pulse">✓ Salvo!</span>
+          )}
+          <button
+            onClick={aplicarTodas}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Salvar Todas
+          </button>
+        </div>
+      </div>
+
+      {linhasEditadas.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-4 text-sm text-red-700 dark:text-red-300">
+          ⚠️ {linhasEditadas.length} item(ns) com limite crítico maior ou igual ao mínimo. O crítico deve ser menor que o mínimo.
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {categorias.map(cat => (
+          <button
+            key={cat.slug}
+            onClick={() => setFiltro(cat.slug)}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              filtro === cat.slug
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            {cat.nome}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Item</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Atual</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">
+                  Mínimo <span className="text-yellow-500">(baixo)</span>
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                  Crítico <span className="text-red-500">(repor)</span>
+                </th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtrados.map(item => (
+                <LinhaItem
+                  key={item.id}
+                  item={item}
+                  onSalvar={handleSalvar}
+                  onResetar={handleResetar}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filtrados.length === 0 && (
+          <div className="text-center py-12 text-gray-400">Nenhum item encontrado</div>
+        )}
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">ℹ️ Como funciona</h3>
+        <p className="text-sm text-blue-700 dark:text-blue-200">
+          <strong>Mínimo:</strong> quando o estoque atual chegar neste valor, o item fica <span className="text-yellow-600">amarelo (baixo)</span>.<br />
+          <strong>Crítico:</strong> quando o estoque atual chegar neste valor, o item fica <span className="text-red-600">vermelho (crítico)</span> e precisa ser reposto com urgência.<br />
+          Os valores salvos ficam armazenados no navegador (localStorage).
+        </p>
+      </div>
+    </div>
+  )
+}
