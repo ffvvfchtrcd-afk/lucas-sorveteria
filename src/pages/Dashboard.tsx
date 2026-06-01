@@ -9,10 +9,10 @@ export default function Dashboard() {
   const { data, getLimites, version } = useStock()
 
   const dados = useMemo(() => ({
-    acai: aplicarLimites(data.acai, getLimites),
-    sorvetes: aplicarLimites(data.sorvetes, getLimites),
-    materias_primas: aplicarLimites(data.materias_primas, getLimites),
-    personalizados: aplicarLimites(data.personalizados, getLimites),
+    acai: aplicarLimites(data.acai || [], getLimites),
+    sorvetes: aplicarLimites(data.sorvetes || [], getLimites),
+    materias_primas: aplicarLimites(data.materias_primas || [], getLimites),
+    personalizados: aplicarLimites(data.personalizados || [], getLimites),
   }), [data, getLimites])
 
   const todosComAlertas = useMemo(() =>

@@ -20,7 +20,7 @@ export default function CategoriaPage() {
 
   const itens = useMemo(() => {
     if (!slug) return []
-    const all = [...data.acai, ...data.sorvetes, ...data.materias_primas, ...data.personalizados]
+    const all = [...(data.acai || []), ...(data.sorvetes || []), ...(data.materias_primas || []), ...(data.personalizados || [])]
     return aplicarLimites(all.filter(i => i.categoria === slug), getLimites)
   }, [slug, data, getLimites])
 

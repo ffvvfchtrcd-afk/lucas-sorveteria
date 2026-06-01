@@ -35,20 +35,20 @@ export function calcularResumo(itens: ItemEstoque[]): { ok: number; baixo: numbe
 
 function getSlugCategorias(data: EstoqueData): { nome: string; slug: string; itens: ItemEstoque[]; cor: string; icone: string }[] {
   const base = [
-    { nome: 'Açaí', slug: 'acai', itens: data.acai, cor: '#7B2D8E', icone: '🟣' },
-    { nome: 'Sorvetes', slug: 'sorvetes', itens: data.sorvetes, cor: '#E07B39', icone: '🟠' },
-    { nome: 'Matérias-Primas', slug: 'materias_primas', itens: data.materias_primas, cor: '#2E86AB', icone: '🔵' },
+    { nome: 'Açaí', slug: 'acai', itens: data.acai || [], cor: '#7B2D8E', icone: '🟣' },
+    { nome: 'Sorvetes', slug: 'sorvetes', itens: data.sorvetes || [], cor: '#E07B39', icone: '🟠' },
+    { nome: 'Matérias-Primas', slug: 'materias_primas', itens: data.materias_primas || [], cor: '#2E86AB', icone: '🔵' },
   ]
 
   const slugsExistentes = new Set(base.map(c => c.slug))
   const personalizados: { nome: string; slug: string; itens: ItemEstoque[]; cor: string; icone: string }[] = []
-  for (const item of data.personalizados) {
+  for (const item of data.personalizados || []) {
     if (!slugsExistentes.has(item.categoria)) {
       slugsExistentes.add(item.categoria)
       personalizados.push({
         nome: item.categoria.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         slug: item.categoria,
-        itens: data.personalizados.filter(i => i.categoria === item.categoria),
+        itens: (data.personalizados || []).filter(i => i.categoria === item.categoria),
         cor: '#6B7280',
         icone: '📂',
       })
@@ -75,17 +75,17 @@ export function getResumoCategorias(data: EstoqueData): ResumoCategoria[] {
 }
 
 export function getItensCriticos(data: EstoqueData): ItemEstoque[] {
-  const todos = [...data.acai, ...data.sorvetes, ...data.materias_primas, ...data.personalizados];
+  const todos = [...(data.acai || []), ...(data.sorvetes || []), ...(data.materias_primas || []), ...(data.personalizados || [])];
   return todos.filter(i => i.alerta === 'critico');
 }
 
 export function getItensBaixo(data: EstoqueData): ItemEstoque[] {
-  const todos = [...data.acai, ...data.sorvetes, ...data.materias_primas, ...data.personalizados];
+  const todos = [...(data.acai || []), ...(data.sorvetes || []), ...(data.materias_primas || []), ...(data.personalizados || [])];
   return todos.filter(i => i.alerta === 'baixo');
 }
 
 export function getTotalGeral(data: EstoqueData): { total: number; ok: number; baixo: number; critico: number } {
-  const todos = [...data.acai, ...data.sorvetes, ...data.materias_primas, ...data.personalizados];
+  const todos = [...(data.acai || []), ...(data.sorvetes || []), ...(data.materias_primas || []), ...(data.personalizados || [])];
   return {
     total: todos.length,
     ok: todos.filter(i => i.alerta === 'ok').length,

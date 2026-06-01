@@ -99,7 +99,13 @@ export function StockProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CUSTOM_ITEMS_KEY, JSON.stringify(customItems))
   }, [customItems])
 
-  const data = mergeData(overrides)
+  const raw = mergeData(overrides)
+  const data: EstoqueData = {
+    acai: raw.acai || [],
+    sorvetes: raw.sorvetes || [],
+    materias_primas: raw.materias_primas || [],
+    personalizados: raw.personalizados || [],
+  }
   const todosItens = [...data.acai, ...data.sorvetes, ...data.materias_primas, ...data.personalizados]
 
   const adicionarQuantidade = useCallback((itemId: string, quantidade: number) => {

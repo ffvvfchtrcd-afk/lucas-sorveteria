@@ -43,7 +43,7 @@ export default function Sidebar() {
   const { data } = useStock()
 
   const categoriasCustom = useMemo(() => {
-    const slugs = new Set(data.personalizados.map(i => i.categoria))
+    const slugs = new Set((data.personalizados || []).map(i => i.categoria))
     return Array.from(slugs).map(slug => ({
       to: `/categoria/${slug}`,
       label: slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
