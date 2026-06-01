@@ -63,9 +63,10 @@ Você TEM acesso a funções para consultar e MODIFICAR o estoque real. Use-as q
 2. **Reportar entrada de mercadoria** → use adicionar_estoque (EX: "chegou 50L de leite")
 3. **Reportar uso/venda/perda** → use definir_estoque para definir valor exato
 4. **Quiser resumo do que falta** → use listar_criticos e listar_baixos
-5. **CRIAR novo produto** → use criar_item! Você PODE criar produtos com qualquer nome e qualquer categoria (inclusive categorias novas que não existem ainda)
-   - Ex: "crie um produto Morango Unidade na categoria frutas" → use criar_item com nome="Morango Unidade", categoria="frutas"
-   - Depois de criar, informe o usuário e pergunte se deseja adicionar quantidade
+5. **CRIAR novo produto** → use criar_item! Você PODE criar produtos com qualquer nome e qualquer categoria (inclusive categorias novas)
+   - Ex: "crie Morango Unidade na categoria frutas" → use criar_item com nome="Morango Unidade", categoria="frutas", tipo="venda", unidade="un"
+6. **EDITAR produto** → use editar_item quando o usuário quiser alterar nome, categoria, tipo ou unidade de um item
+7. **REMOVER produto** → use remover_item quando o usuário pedir para excluir um produto (SEMPRE confirme antes)
 
 ## REGRAS DE FORMATAÇÃO (IMPORTANTE):
 - Use **Markdown** para formatar suas respostas de forma organizada e visual
@@ -175,17 +176,51 @@ function buildTools(todos: ItemEstoque[]): ToolDefinition[] {
       type: 'function',
       function: {
         name: 'criar_item',
-        description: 'CRIA um novo produto no estoque com nome, categoria, unidade, quantidade inicial e mínima. Use quando o usuário pedir para cadastrar um novo produto.',
+        description: 'CRIA um novo produto no estoque com nome, categoria, unidade, tipo, quantidade inicial e mínima. Use quando o usuário pedir para cadastrar um novo produto ou uma nova categoria.',
         parameters: {
           type: 'object',
           properties: {
             nome: { type: 'string', description: 'Nome do novo produto' },
-            categoria: { type: 'string', description: 'Categoria do produto (ex: acai, sorvetes, materias_primas, frutas, etc). Pode ser uma categoria nova.' },
+            categoria: { type: 'string', description: 'Categoria do produto (ex: acai, sorvetes, materias_primas, frutas, etc). Pode ser uma categoria NOVA que não existe ainda.' },
+            tipo: { type: 'string', enum: ['venda', 'producao', 'ambos'], description: "'venda' para aparecer no PDV, 'producao' para insumo, 'ambos' para ambos" },
             unidade: { type: 'string', enum: ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo'], description: 'Unidade de medida' },
             quantidade_inicial: { type: 'number', description: 'Quantidade inicial em estoque' },
             quantidade_minima: { type: 'number', description: 'Quantidade mínima (gatilho de alerta)' },
           },
           required: ['nome', 'categoria', 'unidade', 'quantidade_inicial', 'quantidade_minima'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'editar_item',
+        description: 'EDITA um item existente (nome, categoria, tipo, unidade, quantidade mínima). Use quando o usuário quiser alterar dados de um produto.',
+        parameters: {
+          type: 'object',
+          properties: {
+            item_id: { type: 'string', description: 'ID do item a editar' },
+            nome: { type: 'string', description: 'Novo nome (opcional)' },
+            categoria: { type: 'string', description: 'Nova categoria (opcional)' },
+            tipo: { type: 'string', enum: ['venda', 'producao', 'ambos'], description: "Novo tipo (opcional): 'venda', 'producao', 'ambos'" },
+            unidade: { type: 'string', enum: ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo'], description: 'Nova unidade (opcional)' },
+            quantidade_minima: { type: 'number', description: 'Nova quantidade mínima (opcional)' },
+          },
+          required: ['item_id'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'remover_item',
+        description: 'REMOVE um produto do estoque permanentemente. Use quando o usuário pedir para excluir um item. SEMPRE confirme com o usuário antes de remover.',
+        parameters: {
+          type: 'object',
+          properties: {
+            item_id: { type: 'string', description: 'ID do item a remover' },
+          },
+          required: ['item_id'],
         },
       },
     },
@@ -209,6 +244,8 @@ function executarTool(
   todosItens: ItemEstoque[],
   addLog?: (tipo: string, itemId: string, itemNome: string, quantidade: number, origem?: string) => void,
   adicionarItemPersonalizado?: (item: CustomItemInput) => void,
+  editarItemPersonalizado?: (itemId: string, updates: Partial<CustomItemInput>) => void,
+  removerItemPersonalizado?: (itemId: string) => void,
 ): string {
   const args = JSON.parse(toolCall.function.arguments)
 
@@ -292,29 +329,62 @@ function executarTool(
       const nome = args.nome?.trim()
       const categoria = args.categoria?.trim().toLowerCase().replace(/\s+/g, '_')
       const unidade = args.unidade
+      const tipoItem = args.tipo || 'ambos'
       const qtdInicial = Number(args.quantidade_inicial) || 0
       const qtdMinima = Number(args.quantidade_minima) || 10
       const unidadesValidas = ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo']
+      const tiposValidos = ['venda', 'producao', 'ambos']
 
       if (!nome) return JSON.stringify({ erro: 'Nome do produto é obrigatório' })
       if (!unidadesValidas.includes(unidade)) return JSON.stringify({ erro: `Unidade inválida. Use: ${unidadesValidas.join(', ')}` })
+      if (!tiposValidos.includes(tipoItem)) return JSON.stringify({ erro: `Tipo inválido. Use: venda, producao, ambos` })
 
       const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
       const novoItem: CustomItemInput = {
-        id,
-        nome,
-        categoria,
-        quantidadeAtual: qtdInicial,
-        quantidadeMinima: qtdMinima,
-        unidade,
+        id, nome, categoria, tipo: tipoItem as 'venda' | 'producao' | 'ambos',
+        quantidadeAtual: qtdInicial, quantidadeMinima: qtdMinima, unidade,
       }
       adicionarItemPersonalizado?.(novoItem)
       addLog?.('entrada', id, nome, qtdInicial, 'Chat IA', 'Criação de novo item')
 
       return JSON.stringify({
         sucesso: true,
-        mensagem: `✅ Novo item criado!\nNome: ${nome}\nCategoria: ${categoria}\nUnidade: ${unidade}\nQuantidade inicial: ${qtdInicial}\nQuantidade mínima: ${qtdMinima}`,
-        item: { id, nome, categoria, unidade, quantidade_inicial: qtdInicial, quantidade_minima: qtdMinima },
+        mensagem: `✅ Novo item criado!\nNome: ${nome}\nCategoria: ${categoria}\nTipo: ${tipoItem}\nUnidade: ${unidade}\nQuantidade inicial: ${qtdInicial}\nQuantidade mínima: ${qtdMinima}`,
+        item: { id, nome, categoria, tipo: tipoItem, unidade, quantidade_inicial: qtdInicial, quantidade_minima: qtdMinima },
+      })
+    }
+
+    case 'editar_item': {
+      const itemId = args.item_id
+      const item = todosItens.find(i => i.id === itemId)
+      if (!item) return JSON.stringify({ erro: `Item com ID "${itemId}" não encontrado` })
+
+      const updates: Partial<CustomItemInput> = {}
+      if (args.nome) updates.nome = args.nome.trim()
+      if (args.categoria) updates.categoria = args.categoria.trim().toLowerCase().replace(/\s+/g, '_')
+      if (args.tipo) updates.tipo = args.tipo
+      if (args.unidade) updates.unidade = args.unidade
+      if (args.quantidade_minima !== undefined) updates.quantidadeMinima = Number(args.quantidade_minima)
+
+      editarItemPersonalizado?.(itemId, updates)
+
+      return JSON.stringify({
+        sucesso: true,
+        mensagem: `✅ Item "${item.nome}" atualizado com sucesso!`,
+      })
+    }
+
+    case 'remover_item': {
+      const itemId = args.item_id
+      const item = todosItens.find(i => i.id === itemId)
+      if (!item) return JSON.stringify({ erro: `Item com ID "${itemId}" não encontrado` })
+
+      removerItemPersonalizado?.(itemId)
+      addLog?.('ajuste', itemId, item.nome, 0, 'Chat IA', 'Item removido do estoque')
+
+      return JSON.stringify({
+        sucesso: true,
+        mensagem: `✅ Item "${item.nome}" removido do estoque.`,
       })
     }
 
@@ -402,7 +472,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
 }
 
 export default function ChatPage() {
-  const { data, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, adicionarItemPersonalizado } = useStock()
+  const { data, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado } = useStock()
   const { addLog } = useLog()
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '')
   const [keyInput, setKeyInput] = useState(apiKey)
@@ -476,7 +546,7 @@ export default function ChatPage() {
         history.push(result.message)
 
         for (const tc of result.toolCalls) {
-          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado)
+          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado)
           history.push({ role: 'tool', content: toolResult, tool_call_id: tc.id })
         }
 

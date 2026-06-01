@@ -1,8 +1,10 @@
-import { NavLink } from 'react-router-dom'
+import { useMemo } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useSidebar } from '../App'
+import { useStock } from '../context/StockContext'
 
-const grupos = [
+const gruposBase = [
   {
     label: 'Visão Geral',
     links: [
@@ -17,14 +19,6 @@ const grupos = [
       { to: '/producao', label: 'Produção', icon: '🏭' },
       { to: '/movimentacoes', label: 'Movimentações', icon: '📋' },
       { to: '/validades', label: 'Validades', icon: '📅' },
-    ],
-  },
-  {
-    label: 'Estoque',
-    links: [
-      { to: '/acai', label: 'Açaí', icon: '🟣' },
-      { to: '/sorvetes', label: 'Sorvetes', icon: '🟠' },
-      { to: '/materias-primas', label: 'Matérias-Primas', icon: '🔵' },
     ],
   },
   {
@@ -46,6 +40,34 @@ const grupos = [
 export default function Sidebar() {
   const { theme, toggle } = useTheme()
   const { open, close } = useSidebar()
+  const { data } = useStock()
+
+  const categoriasCustom = useMemo(() => {
+    const slugs = new Set(data.personalizados.map(i => i.categoria))
+    return Array.from(slugs).map(slug => ({
+      to: `/categoria/${slug}`,
+      label: slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      icon: '📂',
+    }))
+  }, [data.personalizados])
+
+  const grupos = useMemo(() => {
+    const categoriasLink = [
+      { to: '/acai', label: 'Açaí', icon: '🟣' },
+      { to: '/sorvetes', label: 'Sorvetes', icon: '🟠' },
+      { to: '/materias-primas', label: 'Matérias-Primas', icon: '🔵' },
+      ...categoriasCustom,
+    ]
+    return gruposBase.map(g => {
+      if (g.label === 'Configurações') {
+        return {
+          ...g,
+          links: [...categoriasLink, ...g.links],
+        }
+      }
+      return g
+    })
+  }, [categoriasCustom])
 
   const content = (
     <aside className="h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shrink-0">
@@ -100,10 +122,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Desktop: fixed sidebar */}
       <div className="hidden md:flex">{content}</div>
-
-      {/* Mobile: overlay drawer */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={close} />

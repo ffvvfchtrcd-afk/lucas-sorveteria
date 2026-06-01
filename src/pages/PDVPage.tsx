@@ -18,7 +18,7 @@ export default function PDVPage() {
     if (!busca.trim()) return []
     const lower = busca.toLowerCase()
     return todosItens
-      .filter(i => i.categoria === 'acai' || i.categoria === 'sorvetes')
+      .filter(i => i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo)
       .filter(i => i.nome.toLowerCase().includes(lower) && i.quantidadeAtual > 0)
       .slice(0, 10)
   }, [busca, todosItens])
@@ -108,7 +108,7 @@ export default function PDVPage() {
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Produtos Disponíveis</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {todosItens
-              .filter(i => (i.categoria === 'acai' || i.categoria === 'sorvetes') && i.quantidadeAtual > 0)
+              .filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0)
               .sort((a, b) => a.nome.localeCompare(b.nome))
               .map(item => {
                 const preco = getPreco(item.id)

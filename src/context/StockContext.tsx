@@ -66,6 +66,7 @@ function mergeData(overrides: StockOverride): EstoqueData {
       unidade: c.unidade,
       alerta: 'ok',
       ultimaAtualizacao: ultima,
+      tipo: c.tipo || 'ambos',
     }
     if (CATEGORIAS_CONHECIDAS.includes(c.categoria)) {
       merged[c.categoria as keyof EstoqueData] = [

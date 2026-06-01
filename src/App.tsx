@@ -21,6 +21,7 @@ import MovimentacoesPage from './pages/MovimentacoesPage'
 import PrecosPage from './pages/PrecosPage'
 import ValidadesPage from './pages/ValidadesPage'
 import RelatoriosPage from './pages/RelatoriosPage'
+import CategoriaPage from './pages/CategoriaPage'
 
 interface SidebarCtx {
   open: boolean
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="/precos" element={<PrecosPage />} />
               <Route path="/validades" element={<ValidadesPage />} />
               <Route path="/relatorios" element={<RelatoriosPage />} />
+              <Route path="/categoria/:slug" element={<CategoriaPage />} />
             </Routes>
           </main>
         </div>

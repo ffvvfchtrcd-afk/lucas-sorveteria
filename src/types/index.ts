@@ -2,6 +2,7 @@ export type UnidadeMedida = 'L' | 'mL' | 'g' | 'kg' | 'un' | 'cx' | 'pct' | 'far
 export type AlertaNivel = 'ok' | 'baixo' | 'critico';
 export type CategoriaSlug = 'acai' | 'sorvetes' | 'materias_primas';
 export type TipoMovimentacao = 'entrada' | 'saida' | 'venda' | 'producao' | 'perda' | 'ajuste';
+export type TipoItem = 'venda' | 'producao' | 'ambos';
 
 export interface ItemEstoque {
   id: string;
@@ -12,6 +13,7 @@ export interface ItemEstoque {
   unidade: UnidadeMedida;
   alerta: AlertaNivel;
   ultimaAtualizacao: string;
+  tipo?: TipoItem;
 }
 
 export interface CustomItemInput {
@@ -21,6 +23,7 @@ export interface CustomItemInput {
   quantidadeAtual: number;
   quantidadeMinima: number;
   unidade: UnidadeMedida;
+  tipo?: TipoItem;
 }
 
 export interface LimitesItem {

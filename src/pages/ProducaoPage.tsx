@@ -23,8 +23,8 @@ export default function ProducaoPage() {
   const [buscaIng, setBuscaIng] = useState('')
   const [buscaRes, setBuscaRes] = useState('')
 
-  const mps = useMemo(() => todosItens.filter(i => i.categoria === 'materias_primas' && i.quantidadeAtual > 0), [todosItens])
-  const produtos = useMemo(() => todosItens.filter(i => i.categoria !== 'materias_primas'), [todosItens])
+  const mps = useMemo(() => todosItens.filter(i => (i.tipo === 'producao' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0), [todosItens])
+  const produtos = useMemo(() => todosItens.filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo)), [todosItens])
 
   const ingFiltrados = buscaIng.trim()
     ? mps.filter(i => i.nome.toLowerCase().includes(buscaIng.toLowerCase())).slice(0, 8)
