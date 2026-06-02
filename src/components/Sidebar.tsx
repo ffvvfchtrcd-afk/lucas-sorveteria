@@ -46,13 +46,13 @@ const gruposEstoqueBase = [
     ],
   },
   {
-    label: 'Cadastros',
+    label: 'Produtos',
     links: [
-      { to: '/estoque/produtos', label: 'Listar Produtos', icon: '📦' },
-      { to: '/estoque/precos', label: 'Preços (obrigatório!)', icon: '💰' },
-      { to: '/estoque/validades', label: 'Validades (lotes)', icon: '📅' },
-      { to: '/estoque/cadastro', label: 'Criar Produto', icon: '📝' },
-      { to: '/estoque/configuracoes', label: 'Limites (alertas)', icon: '⚙️' },
+      { to: '/estoque/produtos', label: 'Listar', icon: '📦' },
+      { to: '/estoque/cadastro', label: 'Criar Novo', icon: '📝' },
+      { to: '/estoque/precos', label: 'Preços', icon: '💰' },
+      { to: '/estoque/validades', label: 'Validades', icon: '📅' },
+      { to: '/estoque/configuracoes', label: 'Limites', icon: '⚙️' },
     ],
   },
   {
@@ -101,18 +101,14 @@ export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const gruposEstoque = isAdmin ? gruposEstoqueBase : gruposEstoqueBase.filter(g =>
-    g.label === 'Operações' || g.label === 'Inteligência'
-  )
+  const gruposAtivos = modulo === 'caixa' ? gruposCaixa
+    : modulo === 'financeiro' ? gruposFinanceiro
+    : gruposEstoqueBase
 
   const isActive = (path: string) => {
     if (path === '/estoque') return location.pathname === '/estoque'
     return location.pathname.startsWith(path)
   }
-
-  const gruposAtivos = modulo === 'caixa' ? gruposCaixa
-    : modulo === 'financeiro' ? (isAdmin ? gruposFinanceiro : [])
-    : gruposEstoque
 
   const moduleInfo = modulo === 'caixa'
     ? { label: 'CAIXA', icon: '🧾', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800' }
