@@ -143,7 +143,12 @@ Você TEM acesso a funções para consultar TUDO — estoque, finanças, validad
   - "manutenção", "conserto", "reparo", "troca" → manutencao
   - "imposto", "taxa", "iss", "icms", "simples" → imposto
   - "perda", "quebrou", "venceu", "estragou" → perda
-  - "transporte", "uber", "combustível", "gasolina", "alimentação", "compra", "embalagem", "material" → outros
+  - "transporte", "uber", "combustível", "gasolina", "diesel", "passagem", "pedagio", "ônibus" → outros
+  - "embalagem", "sacola", "copo", "guardanapo", "papel", "luvas" → outros
+  - "material de limpeza", "detergente", "cloro", "sabão", "desinfetante" → outros
+  - "gás", "botijão", "gas de cozinha" → outros
+  - "compra", "mercado", "supermercado", "comida", "alimentação", "lanche" → outros
+  - QUALQUER OUTRA COISA que não encaixe em aluguel/energia/agua/internet/salario/manutencao/imposto/perda → outros (com descrição clara!)
 - **REGRA DE OURO**: Se tiver dúvida entre duas categorias, escolha a MAIS ESPECÍFICA. Só use "outros" se realmente não encaixar em nenhuma.
 - Depois de registrar, mostre o resumo formatado: "✅ Registrado: ⚡ Conta de Luz — R$ 200,00 (15/05)"
 - Responda em português brasileiro
@@ -170,7 +175,7 @@ function buildTools(todos: ItemEstoque[]): ToolDefinition[] {
     { type: 'function', function: { name: 'resumo_financeiro', description: 'Resumo financeiro completo: receita, custo, lucro bruto/líquido, despesas. Período opcional (YYYY-MM-DD).', parameters: { type: 'object', properties: { inicio: { type: 'string', description: 'Data início YYYY-MM-DD (opcional)' }, fim: { type: 'string', description: 'Data fim YYYY-MM-DD (opcional)' } } } } },
     { type: 'function', function: { name: 'listar_despesas', description: 'Lista todas as despesas registradas (aluguel, luz, água, perdas...). Filtráveis por mês.', parameters: { type: 'object', properties: { mes: { type: 'string', description: 'Mês YYYY-MM (opcional, padrão: atual)' } } } } },
     { type: 'function', function: { name: 'despesas_por_tipo', description: 'Mostra total de despesas agrupado por tipo (aluguel, energia, etc) em um período.', parameters: { type: 'object', properties: { inicio: { type: 'string', description: 'YYYY-MM-DD (opcional)' }, fim: { type: 'string', description: 'YYYY-MM-DD (opcional)' } } } } },
-    { type: 'function', function: { name: 'registrar_despesa', description: 'REGISTRA uma despesa. Você DEVE auto-classificar o tipo baseado na descrição. Ex: "aluguel" para aluguel, "energia" para conta de luz, "agua" para água, "internet" para internet, "salario" para salário/funcionários, "manutencao" para consertos/reparos/manutenção, "imposto" para impostos/taxas, "perda" para produtos perdidos/vencidos, "outros" para gastos diversos.', parameters: { type: 'object', properties: { valor: { type: 'number', description: 'Valor da despesa (R$)' }, descricao: { type: 'string', description: 'Descrição do gasto' }, data: { type: 'string', description: 'Data no formato YYYY-MM-DD (padrão: hoje)' }, tipo: { type: 'string', enum: ['aluguel', 'energia', 'agua', 'internet', 'salario', 'manutencao', 'imposto', 'perda', 'outros'], description: 'Categoria. Se não tiver certeza, use outros' }, observacao: { type: 'string', description: 'Observação opcional' } }, required: ['valor', 'descricao'] } } },
+    { type: 'function', function: { name: 'registrar_despesa', description: 'REGISTRA uma despesa. Você DEVE auto-classificar o tipo baseado na descrição. Ex: "aluguel" para aluguel, "energia" para conta de luz, "agua" para água, "internet" para internet, "salario" para salário/funcionários, "manutencao" para consertos/reparos/manutenção, "imposto" para impostos/taxas, "perda" para produtos perdidos/vencidos, "outros" para gastos diversos.', parameters: { type: 'object', properties: { valor: { type: 'number', description: 'Valor da despesa (R$)' }, descricao: { type: 'string', description: 'Descrição CLARA do que foi pago/com prado. Ex: "Compra de caixa eletrônico", "Conta de água mensal", "Material de limpeza". NUNCA use "Outros" ou "Gasto" genérico. Seja específico.' }, data: { type: 'string', description: 'Data no formato YYYY-MM-DD (padrão: hoje)' }, tipo: { type: 'string', enum: ['aluguel', 'energia', 'agua', 'internet', 'salario', 'manutencao', 'imposto', 'perda', 'outros'], description: 'Categoria. Se não tiver certeza, use outros' }, observacao: { type: 'string', description: 'Observação opcional' } }, required: ['valor', 'descricao'] } } },
     { type: 'function', function: { name: 'resumo_despesas_mensal', description: 'Resumo COMPLETO do mês com total, % de cada tipo de despesa, e comparativo com receita. Perfeito para relatórios mensais.', parameters: { type: 'object', properties: { mes: { type: 'string', description: 'Mês YYYY-MM (padrão: atual)' } } } } },
 
     // ─── VALIDADES ───
@@ -451,8 +456,10 @@ function executarTool(
       if (!args.descricao || isNaN(valor) || valor <= 0) return JSON.stringify({ erro: 'Descrição e valor positivo são obrigatórios' })
       const tipo: DespesaTipo = args.tipo || 'outros'
       const data = args.data || new Date().toISOString().slice(0, 10)
-      adicionarDespesa?.(tipo, valor, args.descricao.trim(), data, args.observacao)
-      return JSON.stringify({ sucesso: true, mensagem: `✅ Gasto registrado: ${DESPESA_TIPOS.find(t => t.value === tipo)?.icone} ${args.descricao} — R$ ${valor.toFixed(2)} em ${data}` })
+      let descricao = args.descricao.trim()
+      descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1)
+      adicionarDespesa?.(tipo, valor, descricao, data, args.observacao)
+      return JSON.stringify({ sucesso: true, mensagem: `✅ Gasto registrado: ${DESPESA_TIPOS.find(t => t.value === tipo)?.icone} ${descricao} — R$ ${valor.toFixed(2)} em ${data}` })
     }
 
     case 'resumo_despesas_mensal': {

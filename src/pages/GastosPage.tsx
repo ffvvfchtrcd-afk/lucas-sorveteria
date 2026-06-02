@@ -16,14 +16,19 @@ interface LotePreview {
 
 function autoCategoria(texto: string): DespesaTipo {
   const t = texto.toLowerCase()
-  if (/aluguel/.test(t)) return 'aluguel'
-  if (/luz|energia|conta de luz/.test(t)) return 'energia'
-  if (/agua|conta de água/.test(t)) return 'agua'
-  if (/internet|wi-?fi|wifi|net/.test(t)) return 'internet'
-  if (/salario|salário|funcionário|funcionario|empregado|folha/.test(t)) return 'salario'
-  if (/manutenção|manutencao|conserto|reparo|troca|quebr/.test(t)) return 'manutencao'
-  if (/imposto|taxa|iss|icms|simples|nota fiscal/.test(t)) return 'imposto'
-  if (/perda|perdeu|venceu|estragou|joguei fora|quebrou|lixo/.test(t)) return 'perda'
+  if (/aluguel|ponto comercial/.test(t)) return 'aluguel'
+  if (/luz|energia|conta de luz|eletricidade/.test(t)) return 'energia'
+  if (/agua|conta de água|conta d.agua/.test(t)) return 'agua'
+  if (/internet|wi-?fi|wifi|net|telefone|celular|operadora/.test(t)) return 'internet'
+  if (/salario|salário|funcionário|funcionario|empregado|folha|paguei o|pagamento funcion/.test(t)) return 'salario'
+  if (/manutenção|manutencao|conserto|reparo|troca|quebr|manutenção|concerto|reparo|consert/.test(t)) return 'manutencao'
+  if (/imposto|taxa|iss|icms|simples|nota fiscal|prefeitura|sefaz|gnre|darf/.test(t)) return 'imposto'
+  if (/perda|perdeu|venceu|estragou|joguei fora|quebrou|lixo|descarte|perdi|perdido/.test(t)) return 'perda'
+  if (/transporte|uber|combustível|gasolina|diesel|etanol|alcool|passagem|ônibus|metro|táxi|taxi|pedagio/.test(t)) return 'outros'
+  if (/embalagem|sacola|copo|prato|guardanapo|papel|luvas|toalha/.test(t)) return 'outros'
+  if (/material|limpeza|detergente|cloro|agua sanitária|sabão|desinfetante|esponja/.test(t)) return 'outros'
+  if (/gás|gas|botijao|botijão/.test(t)) return 'outros'
+  if (/compra|mercado|supermercado|comprei|comida|alimentação|lanche|almoco|almoço|café|agua mineral|refri/.test(t)) return 'outros'
   return 'outros'
 }
 
@@ -41,7 +46,16 @@ function parseLinha(linha: string): { valor: number; descricao: string; data: st
   const dia = dataMatch ? Math.min(31, Math.max(1, parseInt(dataMatch[1]))) : hoje.getDate()
   const dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
 
-  const descricao = t.replace(/\d+[.,]?\d*/g, '').replace(/dia\s+\d{1,2}/g, '').replace(/[,;:]/g, '').trim()
+  let descricao = t
+    .replace(/\d+[.,]?\d*/g, '')
+    .replace(/dia\s+\d{1,2}/g, '')
+    .replace(/[,;:]/g, '')
+    .replace(/^(gastei|paguei|comprei|gasto(\s+com)?)\s+/i, '')
+    .replace(/^(em|de|com|para|no|na|uma?)\s+/i, '')
+    .replace(/\s+(de|em|com|para|no|na|nos|nas|o|a|os|as|do|da|dos|das)\s+$/i, '')
+    .trim()
+  if (!descricao) descricao = t.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim() || 'Gasto'
+  descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1)
   const tipo = autoCategoria(t)
 
   // Se for perda, tenta extrair quantidade + item
