@@ -39,7 +39,8 @@ export default function PrecosPage() {
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">💰 Preços</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Defina o preço de custo e venda de cada produto. A margem é calculada automaticamente.
+          Defina o <strong>preço de custo</strong> (quanto você paga) e o <strong>preço de venda</strong> (quanto o cliente paga) de cada produto.
+          É aqui que o sistema calcula a margem de lucro. ⚠️ <strong>Sem preços cadastrados, o PDV não consegue vender e o Financeiro mostra R$ 0.</strong>
           Valor total em estoque: <strong className="text-gray-700 dark:text-gray-300">R$ {totalEstoque.toFixed(2)}</strong>
         </p>
       </div>

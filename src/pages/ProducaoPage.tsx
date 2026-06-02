@@ -16,6 +16,7 @@ export default function ProducaoPage() {
   const { todosItens, definirQuantidade, adicionarQuantidade } = useStock()
   const { addLog } = useLog()
 
+
   const [producoes, setProducoes] = useState<ProducaoRegistro[]>(carregarProducoes)
   const [nomeProducao, setNomeProducao] = useState('')
   const [ingredientes, setIngredientes] = useState<{ itemId: string; quantidade: number }[]>([])

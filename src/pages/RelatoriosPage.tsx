@@ -45,7 +45,7 @@ export default function RelatoriosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📊 Relatórios</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Visão geral do negócio: vendas, produções, perdas e lista de compras sugerida.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Relatório completo: número de vendas, produções, perdas e entradas. No fim da página, veja a <strong>lista de compras sugerida</strong> com itens que estão abaixo do limite mínimo.</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

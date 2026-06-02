@@ -156,8 +156,8 @@ export default function GastosPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">💰 Financeiro</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Receitas, despesas, perdas — tudo que entra e sai de dinheiro.</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">💸 Gastos & Despesas</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Registre contas a pagar: aluguel, luz, água, salários, perdas, compras. <strong>Perda</strong> também dá baixa automática no estoque. Para ver o resumo de lucros, vá em <strong>Resumo</strong>.</p>
         </div>
         <button onClick={() => setMostrarForm(true)}
           className="px-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">+ Novo</button>

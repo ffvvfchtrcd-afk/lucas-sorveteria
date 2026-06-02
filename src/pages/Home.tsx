@@ -4,7 +4,7 @@ const modules = [
   {
     id: 'caixa',
     titulo: 'CAIXA',
-    descricao: 'PDV, vendas, histórico e relatórios do caixa',
+    descricao: 'Venda no PDV, veja o histórico de movimentações e gere relatórios de vendas.',
     icon: '🧾',
     gradient: 'from-emerald-500 to-teal-600',
     hoverGradient: 'from-emerald-600 to-teal-700',
@@ -13,7 +13,7 @@ const modules = [
   {
     id: 'estoque',
     titulo: 'ESTOQUE',
-    descricao: 'Inventário, configurações, produção e inteligência',
+    descricao: 'Gerencie produtos, preços, validades, produção — e converse com a IA para ajudar no dia a dia.',
     icon: '📦',
     gradient: 'from-indigo-500 to-violet-600',
     hoverGradient: 'from-indigo-600 to-violet-700',
@@ -22,7 +22,7 @@ const modules = [
   {
     id: 'financeiro',
     titulo: 'FINANCEIRO',
-    descricao: 'Despesas, receitas, lucros, perdas e relatórios financeiros',
+    descricao: 'Resumo de lucros, registro de despesas, acompanhamento de metas financeiras mensais.',
     icon: '💰',
     gradient: 'from-amber-500 to-orange-600',
     hoverGradient: 'from-amber-600 to-orange-700',
@@ -37,8 +37,8 @@ export default function Home() {
     <div className="min-h-dvh overflow-y-auto flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 px-6 py-10">
       <div className="text-center mb-10 shrink-0">
         <div className="text-5xl mb-4">🏪</div>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Gestão de Estoque</h1>
-        <p className="text-gray-400 dark:text-gray-500 mt-2">Selecione o módulo desejado</p>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Sorveteria & Açaí</h1>
+        <p className="text-gray-400 dark:text-gray-500 mt-2">Escolha abaixo o que você quer fazer:</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-3xl">
         {modules.map(mod => (

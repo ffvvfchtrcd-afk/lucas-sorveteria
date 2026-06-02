@@ -98,8 +98,8 @@ export default function MetasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">🎯 Metas</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Defina metas financeiras e acompanhe o progresso em tempo real.</p>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">🎯 Metas Financeiras</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Defina uma meta de receita, lucro ou despesa para o mês e acompanhe o progresso. Ex: "Quero lucrar R$ 5.000 em junho". O cálculo usa os preços de venda e custo cadastrados em <strong>Estoque &gt; Preços</strong>.</p>
         </div>
         <button onClick={() => setMostrarForm(true)}
           className="px-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">+ Nova Meta</button>

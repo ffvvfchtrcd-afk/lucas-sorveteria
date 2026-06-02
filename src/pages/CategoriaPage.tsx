@@ -32,7 +32,7 @@ export default function CategoriaPage() {
     <div className="space-y-6" key={version}>
       <div>
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{info.icone} Estoque — {info.nome}</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Gerenciamento de {info.nome.toLowerCase()}</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Visualize e gerencie todos os itens desta categoria. Itens em <span className="text-red-500">vermelho</span> estão críticos, em <span className="text-yellow-500">amarelo</span> estão baixos — clique em Editar para ajustar.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

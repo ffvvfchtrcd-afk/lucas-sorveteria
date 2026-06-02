@@ -59,8 +59,8 @@ export default function ValidadesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📅 Validades</h1>
-          <p className="text-sm text-gray-400 mt-1">Controle de lotes e vencimentos</p>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📅 Validades (Lotes)</h1>
+          <p className="text-sm text-gray-400 mt-1">Cadastre lotes com data de validade para cada produto. Itens próximos ao vencimento aparecem em amarelo, vencidos em vermelho — você pode descartar e registrar a perda automaticamente.</p>
         </div>
         <button onClick={() => setMostrarForm(true)}
           className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">+ Novo Lote</button>

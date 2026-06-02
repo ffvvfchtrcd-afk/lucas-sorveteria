@@ -55,7 +55,7 @@ export default function CadastroPage() {
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📝 Cadastro de Produtos</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Crie produtos personalizados que não existem nas categorias padrão. Eles aparecerão no Dashboard e no PDV.
+          Crie produtos personalizados que não existem nas categorias padrão (açaí, sorvetes, matérias-primas). Escolha nome, unidade, tipo e quantidade inicial. Depois de cadastrar, vá em <strong>Preços</strong> para definir custo e preço de venda.
         </p>
       </div>
 

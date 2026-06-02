@@ -218,8 +218,9 @@ export default function ProdutosPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div>
         <h1 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100">📦 Produtos</h1>
+        <p className="text-xs text-gray-400 mt-0.5">Visualize todos os itens, edite nome/unidade/tipo e veja preços e alertas. Para cadastrar novos itens, vá em <strong>Cadastro</strong>.</p>
         {salvo && <span className="text-xs text-green-600 font-medium animate-pulse">{salvo}</span>}
       </div>
 

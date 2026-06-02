@@ -70,7 +70,7 @@ export default function MovimentacoesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📋 Movimentações</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Histórico completo de entradas, saídas, vendas, produções e perdas. ({logs.length} registro(s))</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Histórico completo de tudo que entrou e saiu do estoque: compras, vendas, perdas, produções e ajustes. ({logs.length} registro(s))</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setMostrarPerda(true)} className="px-3 py-2 text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30 rounded-lg hover:bg-orange-100">+ Registrar Perda</button>

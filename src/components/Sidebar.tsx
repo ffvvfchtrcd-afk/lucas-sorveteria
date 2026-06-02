@@ -31,9 +31,9 @@ const gruposFinanceiro = [
   {
     label: 'Financeiro',
     links: [
-      { to: '/financeiro/resumo', label: 'Resumo', icon: '📈' },
-      { to: '/financeiro/gastos', label: 'Lançamentos', icon: '💸' },
-      { to: '/financeiro/metas', label: 'Metas', icon: '🎯' },
+      { to: '/financeiro/resumo', label: 'Resumo (Lucros)', icon: '📈' },
+      { to: '/financeiro/gastos', label: 'Gastos & Despesas', icon: '💸' },
+      { to: '/financeiro/metas', label: 'Metas Financeiras', icon: '🎯' },
     ],
   },
 ]
@@ -46,13 +46,13 @@ const gruposEstoqueBase = [
     ],
   },
   {
-    label: 'Configurações',
+    label: 'Cadastros',
     links: [
-      { to: '/estoque/produtos', label: 'Produtos', icon: '📦' },
-      { to: '/estoque/precos', label: 'Preços', icon: '💰' },
-      { to: '/estoque/validades', label: 'Validades', icon: '📅' },
-      { to: '/estoque/cadastro', label: 'Cadastro', icon: '📝' },
-      { to: '/estoque/configuracoes', label: 'Limites', icon: '⚙️' },
+      { to: '/estoque/produtos', label: 'Listar Produtos', icon: '📦' },
+      { to: '/estoque/precos', label: 'Preços (obrigatório!)', icon: '💰' },
+      { to: '/estoque/validades', label: 'Validades (lotes)', icon: '📅' },
+      { to: '/estoque/cadastro', label: 'Criar Produto', icon: '📝' },
+      { to: '/estoque/configuracoes', label: 'Limites (alertas)', icon: '⚙️' },
     ],
   },
   {
@@ -82,7 +82,7 @@ const tabsEstoque = [
 ]
 
 const tabsFinanceiro = [
-  { to: '/financeiro/resumo', label: 'Resumo', icon: '📈' },
+  { to: '/financeiro/resumo', label: 'Lucros', icon: '📈' },
   { to: '/financeiro/gastos', label: 'Gastos', icon: '💸' },
   { to: '/financeiro/metas', label: 'Metas', icon: '🎯' },
 ]

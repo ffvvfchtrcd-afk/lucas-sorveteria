@@ -159,7 +159,7 @@ export default function ConfiguracoesPage() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">⚙️ Limites de Estoque</h1>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Defina quando cada item deve disparar alerta de <span className="text-yellow-500">estoque baixo (🟡)</span> ou <span className="text-red-500">crítico (🔴)</span>. Itens abaixo do mínimo ficam amarelos, abaixo do crítico ficam vermelhos.
+            Defina os limites de cada item: o <strong>mínimo</strong> (alerta amarelo — "está acabando") e o <strong>crítico</strong> (alerta vermelho — "precisa comprar URGENTE"). Os alertas aparecem no Dashboard e na lista de compras sugerida.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

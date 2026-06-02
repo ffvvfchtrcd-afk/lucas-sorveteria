@@ -179,7 +179,7 @@ function getSaudeCor(pct: number) {
     <div className="space-y-6" key={version}>
       <div>
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">📊 Dashboard</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Visão geral do estoque</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Visão geral do estoque: saúde dos itens, últimas movimentações, validades próximas e itens que precisam de reposição.</p>
       </div>
 
       {/* ════════ ABAS ════════ */}

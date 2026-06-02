@@ -55,6 +55,7 @@ function gerarSistema(
   const despesasMes = despesas.filter(d => d.data.startsWith(mesAtual)).reduce((s, d) => s + d.valor, 0)
 
   return `Você é um assistente especializado em gestão de estoque e finanças de uma sorveteria/açaíteria.
+Você também ENSINA o usuário a usar o sistema quando ele perguntar "como fazer X".
 
 Data de hoje: ${agora}
 
@@ -76,6 +77,14 @@ ${inventario}
 - Ex: "Olá! Este mês temos R$ X em receita e R$ Y em despesas. X itens críticos no estoque."
 - Se notar itens críticos, já sugira providências
 - Se o usuário perguntar de forma vaga, faça perguntas direcionadas
+
+## ENSINE O USUÁRIO (NOVO!)
+Quando o usuário perguntar "como fazer X" ou "como cadastro Y", EXPLIQUE o passo a passo com clareza:
+- Ex: "Como cadastrar um produto?" → "Vá em Estoque > Cadastro, preencha nome, unidade e tipo, depois vá em Estoque > Preços para definir o valor de venda."
+- Ex: "Como registrar uma venda?" → "Vá em CAIXA > PDV, clique no produto, ajuste a quantidade, e finalize a venda."
+- Ex: "Cadastrei um produto, e agora?" → "Agora vá em Estoque > Preços para definir o preço de custo e venda. Sem preço, o PDV e o Financeiro não funcionam."
+- Ex: "Como registrar uma despesa?" → "Vá em Financeiro > Lançamentos, use o Registro Rápido (ex: 'paguei 200 de luz') ou o formulário manual."
+- Ex: "Por que o financeiro mostra R$ 0?" → "Você precisa cadastrar os preços dos produtos em Estoque > Preços. É o preço de venda que calcula a receita."
 
 ## COMANDOS DISPONÍVEIS
 Você TEM acesso a funções para consultar TUDO — estoque, finanças, validades, movimentações. Use-as sempre:
@@ -563,7 +572,7 @@ export default function ChatPage() {
       const systemContent = gerarSistema(data, getLimites, logs, precos, despesas)
       const tools = buildTools(todosItens)
       const history: Message[] = [
-        { role: 'system', content: systemContent + '\n\nFaça uma saudação proativa! Analise o estoque e as finanças e sugira ações com base no estado atual. Seja educado e direto.' },
+        { role: 'system', content: systemContent + '\n\nFaça uma saudação proativa! Analise o estoque e as finanças e sugira ações com base no estado atual. Seja educado e direto. Lembre ao usuário que ele pode perguntar "como fazer" qualquer coisa que você explica o passo a passo.' },
       ]
 
       try {
@@ -657,7 +666,7 @@ export default function ChatPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">🤖 Assistente IA</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Converse com a IA para consultar e gerenciar o estoque. Você pode perguntar sobre quantidades, adicionar itens, criar novos produtos e muito mais — tudo em linguagem natural.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Converse com a IA para consultar o estoque, registrar movimentações, criar produtos e tirar dúvidas sobre o sistema. Pergunte "como fazer X" que ela explica o passo a passo!</p>
         </div>
         <div className="max-w-lg bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm dark:shadow-black/20">
           <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">🔑 Conecte sua IA</h2>

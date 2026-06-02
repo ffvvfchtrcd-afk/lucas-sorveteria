@@ -106,8 +106,8 @@ export default function FinanceiroPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">📈 Financeiro</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Receitas, despesas e lucro — resumo completo do negócio.</p>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">📈 Resumo Financeiro</h1>
+        <p className="text-xs text-gray-400 mt-0.5">Receita, custo dos produtos, lucro bruto, despesas e lucro líquido. ⚠️ <strong>Se está tudo R$ 0, cadastre os preços em Estoque &gt; Preços e registre as despesas em Gastos &amp; Despesas.</strong></p>
       </div>
 
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 overflow-x-auto">
