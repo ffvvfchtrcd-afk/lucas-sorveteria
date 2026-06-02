@@ -34,8 +34,8 @@ export default function Home() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-dvh overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
-      <div className="flex flex-col items-center px-6 py-8 md:py-16">
+    <div className="h-dvh overflow-y-auto overscroll-contain bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex flex-col items-center px-6 py-8 md:py-16 min-h-full">
         <div className="text-center mb-8 md:mb-12">
           <div className="text-5xl mb-4">🏪</div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Sorveteria & Açaí</h1>
