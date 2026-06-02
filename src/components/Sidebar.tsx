@@ -6,6 +6,7 @@ function useModulo() {
   const loc = useLocation()
   if (loc.pathname.startsWith('/caixa')) return 'caixa' as const
   if (loc.pathname.startsWith('/estoque')) return 'estoque' as const
+  if (loc.pathname.startsWith('/financeiro')) return 'financeiro' as const
   return null
 }
 
@@ -25,6 +26,16 @@ const gruposCaixa = [
   },
 ]
 
+const gruposFinanceiro = [
+  {
+    label: 'Financeiro',
+    links: [
+      { to: '/financeiro/resumo', label: 'Resumo', icon: '📈' },
+      { to: '/financeiro/gastos', label: 'Lançamentos', icon: '💸' },
+    ],
+  },
+]
+
 const gruposEstoqueBase = [
   {
     label: 'Visão Geral',
@@ -35,6 +46,7 @@ const gruposEstoqueBase = [
   {
     label: 'Configurações',
     links: [
+      { to: '/estoque/produtos', label: 'Produtos', icon: '📦' },
       { to: '/estoque/precos', label: 'Preços', icon: '💰' },
       { to: '/estoque/validades', label: 'Validades', icon: '📅' },
       { to: '/estoque/cadastro', label: 'Cadastro', icon: '📝' },
@@ -67,6 +79,11 @@ const tabsEstoque = [
   { to: '/estoque/chat', label: 'IA', icon: '🤖' },
 ]
 
+const tabsFinanceiro = [
+  { to: '/financeiro/resumo', label: 'Resumo', icon: '📈' },
+  { to: '/financeiro/gastos', label: 'Gastos', icon: '💸' },
+]
+
 export default function Sidebar() {
   const modulo = useModulo()
   const { theme, toggle } = useTheme()
@@ -81,10 +98,12 @@ export default function Sidebar() {
     return location.pathname.startsWith(path)
   }
 
-  const gruposAtivos = modulo === 'caixa' ? gruposCaixa : gruposEstoque
+  const gruposAtivos = modulo === 'caixa' ? gruposCaixa : modulo === 'financeiro' ? gruposFinanceiro : gruposEstoque
 
   const moduleInfo = modulo === 'caixa'
     ? { label: 'CAIXA', icon: '🧾', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800' }
+    : modulo === 'financeiro'
+    ? { label: 'FINANCEIRO', icon: '📈', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' }
     : { label: 'ESTOQUE', icon: '📦', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-800' }
 
   const desktopSidebar = (
@@ -131,7 +150,7 @@ export default function Sidebar() {
     </aside>
   )
 
-  const tabsMobile = modulo === 'caixa' ? tabsCaixa : tabsEstoque
+  const tabsMobile = modulo === 'caixa' ? tabsCaixa : modulo === 'financeiro' ? tabsFinanceiro : tabsEstoque
 
   const menuOverlay = (
     <div className="fixed inset-0 z-50 md:hidden transition-opacity duration-200" onClick={close}>

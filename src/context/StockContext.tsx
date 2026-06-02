@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput, CATEGORIAS_BASE } from '../types'
+import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput, CATEGORIAS_BASE, UnidadeMedida, TipoItem } from '../types'
 import { carregarDados as carregarDadosBase } from '../utils/estoque'
 
 const OVERRIDES_KEY = 'estoque_quantidades'
 const CUSTOM_ITEMS_KEY = 'estoque_itens_personalizados'
+const ITEM_PROPS_KEY = 'estoque_item_props'
 
 interface StockOverride {
   [itemId: string]: {
@@ -24,6 +25,7 @@ interface StockContextType {
   adicionarItemPersonalizado: (item: CustomItemInput) => void
   removerItemPersonalizado: (itemId: string) => void
   editarItemPersonalizado: (itemId: string, updates: Partial<CustomItemInput>) => void
+  editarItem: (itemId: string, updates: Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem }>) => void
 }
 
 const StockContext = createContext<StockContextType | null>(null)
@@ -31,24 +33,44 @@ const StockContext = createContext<StockContextType | null>(null)
 function getCustomItems(): CustomItemInput[] {
   try {
     const saved = localStorage.getItem(CUSTOM_ITEMS_KEY)
-    return saved ? JSON.parse(saved) : []
+    const items: CustomItemInput[] = saved ? JSON.parse(saved) : []
+    // Remove duplicatas por ID (mantém o último)
+    const seen = new Set<string>()
+    return items.filter(i => {
+      if (seen.has(i.id)) return false
+      seen.add(i.id)
+      return true
+    })
   } catch { return [] }
 }
 
 const CATEGORIAS_CONHECIDAS = CATEGORIAS_BASE.map(c => c.slug)
 
+function getItemProps(): Record<string, Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem }>> {
+  try {
+    return JSON.parse(localStorage.getItem(ITEM_PROPS_KEY) || '{}')
+  } catch { return {} }
+}
+
+function applyProps(item: ItemEstoque, props: Record<string, any>): ItemEstoque {
+  const p = props[item.id]
+  if (!p) return item
+  return { ...item, ...p }
+}
+
 function mergeData(overrides: StockOverride): EstoqueData {
   const base = carregarDadosBase()
   const custom = getCustomItems()
+  const itemProps = getItemProps()
   const merged: EstoqueData = { acai: [], sorvetes: [], materias_primas: [], personalizados: [] }
 
   for (const cat of ['acai', 'sorvetes', 'materias_primas'] as const) {
     const baseItems = base[cat].map(item => {
       const ovr = overrides[item.id]
-      if (ovr) {
-        return { ...item, quantidadeAtual: ovr.quantidadeAtual, ultimaAtualizacao: ovr.ultimaAtualizacao }
-      }
-      return { ...item }
+      let updated = ovr
+        ? { ...item, quantidadeAtual: ovr.quantidadeAtual, ultimaAtualizacao: ovr.ultimaAtualizacao }
+        : { ...item }
+      return applyProps(updated, itemProps)
     })
     merged[cat] = baseItems
   }
@@ -68,13 +90,13 @@ function mergeData(overrides: StockOverride): EstoqueData {
       ultimaAtualizacao: ultima,
       tipo: c.tipo || 'ambos',
     }
-    if (CATEGORIAS_CONHECIDAS.includes(c.categoria)) {
-      merged[c.categoria as keyof EstoqueData] = [
-        ...(merged[c.categoria as keyof EstoqueData] as ItemEstoque[]),
-        item,
-      ]
-    } else {
-      merged.personalizados.push(item)
+    const withProps = applyProps(item, itemProps)
+    const catList = CATEGORIAS_CONHECIDAS.includes(c.categoria)
+      ? merged[c.categoria as keyof EstoqueData] as ItemEstoque[]
+      : merged.personalizados
+    // Evita duplicatas: se já existe item com este ID, pula
+    if (!catList.find(ex => ex.id === c.id)) {
+      catList.push(withProps)
     }
   }
 
@@ -176,11 +198,25 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setVersion(v => v + 1)
   }, [])
 
+  const editarItem = useCallback((itemId: string, updates: Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem }>) => {
+    const customItem = customItems.find(c => c.id === itemId)
+    if (customItem) {
+      editarItemPersonalizado(itemId, updates)
+    } else {
+      try {
+        const saved = JSON.parse(localStorage.getItem(ITEM_PROPS_KEY) || '{}')
+        saved[itemId] = { ...(saved[itemId] || {}), ...updates }
+        localStorage.setItem(ITEM_PROPS_KEY, JSON.stringify(saved))
+        setVersion(v => v + 1)
+      } catch { /* ignore */ }
+    }
+  }, [customItems, editarItemPersonalizado])
+
   return (
     <StockContext.Provider value={{
       data, version, adicionarQuantidade, definirQuantidade, getLimites,
       buscarItemPorNome, todosItens, customItems,
-      adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado
+      adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado, editarItem
     }}>
       {children}
     </StockContext.Provider>

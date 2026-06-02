@@ -118,6 +118,29 @@ export const UNIDADES: { value: UnidadeMedida; label: string }[] = [
   { value: 'fardo', label: 'Fardos (fardo)' },
 ];
 
+export type DespesaTipo = 'aluguel' | 'energia' | 'agua' | 'internet' | 'perda' | 'manutencao' | 'salario' | 'imposto' | 'outros';
+
+export interface Despesa {
+  id: string;
+  tipo: DespesaTipo;
+  valor: number;
+  descricao: string;
+  data: string;
+  observacao?: string;
+}
+
+export const DESPESA_TIPOS: { value: DespesaTipo; label: string; icone: string }[] = [
+  { value: 'aluguel', label: 'Aluguel', icone: '🏠' },
+  { value: 'energia', label: 'Conta de Luz', icone: '⚡' },
+  { value: 'agua', label: 'Conta de Água', icone: '💧' },
+  { value: 'internet', label: 'Internet', icone: '🌐' },
+  { value: 'salario', label: 'Salário/Funcionários', icone: '👥' },
+  { value: 'manutencao', label: 'Manutenção', icone: '🔧' },
+  { value: 'imposto', label: 'Impostos/Taxas', icone: '📄' },
+  { value: 'perda', label: 'Perda de Produtos', icone: '🗑️' },
+  { value: 'outros', label: 'Outros', icone: '📌' },
+];
+
 export function getIconeCategoria(slug: string): string {
   const found = CATEGORIAS_BASE.find(c => c.slug === slug)
   return found ? found.icone : '📂'

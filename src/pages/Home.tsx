@@ -19,6 +19,15 @@ const modules = [
     hoverGradient: 'from-indigo-600 to-violet-700',
     path: '/estoque',
   },
+  {
+    id: 'financeiro',
+    titulo: 'FINANCEIRO',
+    descricao: 'Despesas, receitas, lucros, perdas e relatórios financeiros',
+    icon: '💰',
+    gradient: 'from-amber-500 to-orange-600',
+    hoverGradient: 'from-amber-600 to-orange-700',
+    path: '/financeiro/resumo',
+  },
 ]
 
 export default function Home() {
@@ -31,7 +40,7 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Gestão de Estoque</h1>
         <p className="text-gray-400 dark:text-gray-500 mt-2">Selecione o módulo desejado</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-3xl">
         {modules.map(mod => (
           <button
             key={mod.id}

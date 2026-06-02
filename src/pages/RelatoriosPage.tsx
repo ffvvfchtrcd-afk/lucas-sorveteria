@@ -45,31 +45,41 @@ export default function RelatoriosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📊 Relatórios</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Visão geral do negócio</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Visão geral do negócio: vendas, produções, perdas e lista de compras sugerida.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{vendas.length}</div>
-          <div className="text-xs text-gray-400">Total de Vendas</div>
+          <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{vendas.length}</p>
+          <p className="text-xs text-gray-400 mt-1">Vendas realizadas</p>
+          <p className="text-[10px] text-gray-400">Itens vendidos no PDV</p>
         </div>
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{producoes.length}</div>
-          <div className="text-xs text-gray-400">Produções</div>
+          <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{producoes.length}</p>
+          <p className="text-xs text-gray-400 mt-1">Produções</p>
+          <p className="text-[10px] text-gray-400">MPs transformadas em produtos</p>
         </div>
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <div className="text-2xl font-bold text-red-600">{perdas.length}</div>
-          <div className="text-xs text-gray-400">Perdas Registradas</div>
+          <p className="text-2xl font-bold text-red-600">{perdas.length}</p>
+          <p className="text-xs text-gray-400 mt-1">Perdas</p>
+          <p className="text-[10px] text-gray-400">Itens danificados ou vencidos</p>
         </div>
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{entradas.length}</div>
-          <div className="text-xs text-gray-400">Entradas</div>
+          <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{entradas.length}</p>
+          <p className="text-xs text-gray-400 mt-1">Entradas</p>
+          <p className="text-[10px] text-gray-400">Mercadoria recebida</p>
         </div>
       </div>
 
       {listaCompras.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-6">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">🛒 Lista de Compras Sugerida</h2>
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">🛒 Lista de Compras Sugerida</h2>
+              <p className="text-xs text-gray-400">Itens abaixo do limite mínimo que precisam ser repostos — críticos (🔴) primeiro.</p>
+            </div>
+            <span className="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{listaCompras.length} item(ns)</span>
+          </div>
           <div className="space-y-2">
             {listaCompras.map(item => (
               <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -88,7 +98,10 @@ export default function RelatoriosPage() {
 
       {vendasPorDia.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-6">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">📈 Vendas por Dia</h2>
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">📈 Vendas por Dia</h2>
+            <p className="text-xs text-gray-400">Últimos 30 dias com vendas registradas. Mostra quantidade de itens e faturamento bruto.</p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -114,7 +127,9 @@ export default function RelatoriosPage() {
 
       {logs.length === 0 && (
         <div className="text-center py-12 text-gray-400 text-sm">
-          Nenhum dado disponível. Comece registrando vendas, produções e movimentações.
+          <p className="text-3xl mb-2">📊</p>
+          <p className="font-medium">Nenhum dado disponível ainda</p>
+          <p className="text-xs mt-1">Registre vendas no <strong>PDV</strong>, produções em <strong>Produção</strong>, ou movimentações em <strong>Movimentações</strong> para começar a gerar relatórios.</p>
         </div>
       )}
     </div>

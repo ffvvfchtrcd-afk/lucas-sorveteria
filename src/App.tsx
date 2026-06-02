@@ -6,6 +6,7 @@ import { ConfigProvider } from './context/ConfigContext'
 import { LogProvider } from './context/LogContext'
 import { PrecoProvider } from './context/PrecoContext'
 import { ValidadeProvider } from './context/ValidadeContext'
+import { GastosProvider } from './context/GastosContext'
 import Sidebar from './components/Sidebar'
 import BuscaGlobal from './components/BuscaGlobal'
 import Home from './pages/Home'
@@ -23,6 +24,9 @@ import PrecosPage from './pages/PrecosPage'
 import ValidadesPage from './pages/ValidadesPage'
 import RelatoriosPage from './pages/RelatoriosPage'
 import CategoriaPage from './pages/CategoriaPage'
+import ProdutosPage from './pages/ProdutosPage'
+import GastosPage from './pages/GastosPage'
+import FinanceiroPage from './pages/FinanceiroPage'
 
 interface SidebarCtx {
   open: boolean
@@ -44,7 +48,8 @@ export default function App() {
     <StockProvider>
     <PrecoProvider>
     <LogProvider>
-    <ValidadeProvider>
+      <ValidadeProvider>
+      <GastosProvider>
       <ConfigProvider>
         <SidebarContext.Provider value={{ open, toggle: () => setOpen(v => !v), close: () => setOpen(false) }}>
         {isHome ? (
@@ -73,6 +78,9 @@ export default function App() {
                 <Route path="/caixa/pdv" element={<PDVPage />} />
                 <Route path="/caixa/movimentacoes" element={<MovimentacoesPage />} />
                 <Route path="/caixa/relatorios" element={<RelatoriosPage />} />
+                <Route path="/estoque/produtos" element={<ProdutosPage />} />
+                <Route path="/financeiro/gastos" element={<GastosPage />} />
+                <Route path="/financeiro/resumo" element={<FinanceiroPage />} />
               </Routes>
               </div>
             </main>
@@ -80,6 +88,7 @@ export default function App() {
         )}
         </SidebarContext.Provider>
       </ConfigProvider>
+      </GastosProvider>
     </ValidadeProvider>
     </LogProvider>
     </PrecoProvider>

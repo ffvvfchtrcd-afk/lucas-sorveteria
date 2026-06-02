@@ -35,12 +35,12 @@ export default function CadastroPage() {
     adicionarItemPersonalizado(item)
     setNome('')
     setQuantidadeAtual(0)
-    setSucesso(`"${item.nome}" adicionado com sucesso!`)
-    setTimeout(() => setSucesso(''), 3000)
+    setSucesso(`✓ "${item.nome}" adicionado com sucesso! Agora ele aparece nas categorias do sistema.`)
+    setTimeout(() => setSucesso(''), 4000)
   }
 
   function handleRemover(id: string, nome: string) {
-    if (window.confirm(`Remover "${nome}" permanentemente?`)) {
+    if (window.confirm(`Remover "${nome}" permanentemente? Esta ação não pode ser desfeita.`)) {
       removerItemPersonalizado(id)
     }
   }
@@ -55,28 +55,33 @@ export default function CadastroPage() {
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">📝 Cadastro de Produtos</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Adicione, edite ou remova itens do estoque
+          Crie produtos personalizados que não existem nas categorias padrão. Eles aparecerão no Dashboard e no PDV.
         </p>
       </div>
 
       {sucesso && (
-        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-xl p-4 text-sm text-green-700 dark:text-green-300 animate-pulse">
-          ✓ {sucesso}
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-xl p-4 text-sm text-green-700 dark:text-green-300 animate-pulse flex items-center gap-2">
+          <span>✅</span> {sucesso}
         </div>
       )}
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-6">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Novo Produto</h2>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-5 w-1 bg-indigo-500 rounded-full" />
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Criar Novo Produto</h2>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">Preencha os campos abaixo para adicionar um novo item ao estoque.</p>
         <form onSubmit={handleAdicionar} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="sm:col-span-2 lg:col-span-1">
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nome do Produto</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Nome do Produto <span className="text-red-400">*</span></label>
             <input type="text" value={nome} onChange={e => setNome(e.target.value)} required
               placeholder="Ex: Morango Unidade"
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <p className="text-[10px] text-gray-400 mt-0.5">Nome visível em todo o sistema</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Categoria</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Categoria <span className="text-red-400">*</span></label>
             <select value={categoria} onChange={e => setCategoria(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400">
               {CATEGORIAS_BASE.map(cat => (
@@ -89,6 +94,7 @@ export default function CadastroPage() {
                 placeholder="Digite o nome da nova categoria"
                 className="mt-2 w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
             )}
+            <p className="text-[10px] text-gray-400 mt-0.5">Para agrupar produtos do mesmo tipo</p>
           </div>
 
           <div>
@@ -99,26 +105,32 @@ export default function CadastroPage() {
               <option value="venda">Venda (aparece no PDV)</option>
               <option value="producao">Produção (insumo)</option>
             </select>
+            <p className="text-[10px] text-gray-400 mt-0.5"><strong>Venda:</strong> aparece no PDV · <strong>Produção:</strong> usado como insumo</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Unidade</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Unidade de Medida <span className="text-red-400">*</span></label>
             <select value={unidade} onChange={e => setUnidade(e.target.value as UnidadeMedida)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400">
               {UNIDADES.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
             </select>
+            <p className="text-[10px] text-gray-400 mt-0.5">Ex: litros, quilos, unidades, pacotes...</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Quant. Inicial</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Quantidade Inicial</label>
             <input type="number" value={quantidadeAtual} onChange={e => setQuantidadeAtual(Number(e.target.value))} min={0}
+              placeholder="Ex: 50"
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <p className="text-[10px] text-gray-400 mt-0.5">Quanto já tem em estoque agora</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Quant. Mínima</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Quantidade Mínima</label>
             <input type="number" value={quantidadeMinima} onChange={e => setQuantidadeMinima(Number(e.target.value))} min={0}
+              placeholder="Ex: 10"
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <p className="text-[10px] text-gray-400 mt-0.5">Gatilho para alerta de estoque baixo</p>
           </div>
 
           <div className="flex items-end">
@@ -133,23 +145,27 @@ export default function CadastroPage() {
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="px-4 md:px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-            Produtos Customizados {customItems.length > 0 && <span className="text-sm text-gray-400 font-normal">({customItems.length})</span>}
+            Produtos Customizados {customItems.length > 0 && <span className="text-sm text-gray-400 font-normal">({customItems.length} cadastrados)</span>}
           </h2>
         </div>
 
         {customItems.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-sm">Nenhum produto customizado ainda.</div>
+          <div className="text-center py-12 text-gray-400 text-sm">
+            <p className="text-3xl mb-2">📝</p>
+            <p className="font-medium">Nenhum produto customizado ainda.</p>
+            <p className="text-xs mt-1">Use o formulário acima para adicionar produtos que não estão nas categorias padrão.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Nome</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Produto</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Categoria</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Tipo</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Tipo (uso)</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Unidade</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Qtd</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Mín</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Em Estoque</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Mínimo</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Ações</th>
                 </tr>
               </thead>

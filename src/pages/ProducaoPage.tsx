@@ -123,7 +123,7 @@ export default function ProducaoPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">🏭 Produção</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Consuma matérias-primas para produzir itens</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Consuma matérias-primas do estoque para gerar novos produtos. Ex: usar leite e cacau para produzir achocolatado.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -132,18 +132,20 @@ export default function ProducaoPage() {
             type="text"
             value={nomeProducao}
             onChange={e => setNomeProducao(e.target.value)}
-            placeholder="Nome da produção (ex: Leite Condensado Caseiro)"
+            placeholder="Ex: Leite Condensado Caseiro"
             className="w-full px-4 py-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
+          <p className="text-xs text-gray-400 -mt-2">Dê um nome para esta produção (ex: "Massa de Chocolate", "Calda de Morango")</p>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">🧪 Ingredientes (MPs que serão consumidas)</h3>
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">🧪 Ingredientes</h3>
+            <p className="text-xs text-gray-400 mb-2">Itens que serão <strong>consumidos</strong> do estoque para fazer a produção.</p>
             <div className="relative mb-2">
               <input
                 type="text"
                 value={buscaIng}
                 onChange={e => setBuscaIng(e.target.value)}
-                placeholder="Buscar matéria-prima..."
+                placeholder="Buscar ingrediente (matéria-prima)..."
                 className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
               {ingFiltrados.length > 0 && (
@@ -176,7 +178,8 @@ export default function ProducaoPage() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">📦 Resultado (produtos gerados)</h3>
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">📦 Resultado</h3>
+            <p className="text-xs text-gray-400 mb-2">Produtos que serão <strong>adicionados</strong> ao estoque após a produção.</p>
             <div className="relative mb-2">
               <input
                 type="text"
@@ -223,9 +226,14 @@ export default function ProducaoPage() {
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 overflow-y-auto max-h-[70vh]">
-          <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">📋 Histórico de Produção</h2>
+          <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">📋 Histórico de Produção</h2>
+          <p className="text-xs text-gray-400 mb-3">Registros das últimas produções realizadas.</p>
           {producoes.length === 0 ? (
-            <p className="text-center text-gray-400 text-sm py-6">Nenhuma produção registrada</p>
+            <div className="text-center text-gray-400 text-sm py-6">
+              <p className="text-2xl mb-1">🏭</p>
+              <p>Nenhuma produção registrada</p>
+              <p className="text-xs mt-1">Preencha o formulário ao lado e clique em "Executar Produção" para criar seu primeiro registro.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {producoes.slice(0, 30).map(p => (

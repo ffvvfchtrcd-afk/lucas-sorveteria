@@ -157,9 +157,9 @@ export default function ConfiguracoesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">⚙️ Configurações</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">⚙️ Limites de Estoque</h1>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Defina os limites de estoque para cada item
+            Defina quando cada item deve disparar alerta de <span className="text-yellow-500">estoque baixo (🟡)</span> ou <span className="text-red-500">crítico (🔴)</span>. Itens abaixo do mínimo ficam amarelos, abaixo do crítico ficam vermelhos.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -176,8 +176,12 @@ export default function ConfiguracoesPage() {
       </div>
 
       {linhasEditadas.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-4 text-sm text-red-700 dark:text-red-300">
-          ⚠️ {linhasEditadas.length} item(ns) com limite crítico maior ou igual ao mínimo. O crítico deve ser menor que o mínimo.
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-4 text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
+          <span className="shrink-0 mt-0.5">⚠️</span>
+          <div>
+            <p className="font-medium">{linhasEditadas.length} item(ns) com limite crítico maior ou igual ao mínimo.</p>
+            <p className="text-xs mt-0.5">O valor <strong>crítico</strong> deve ser menor que o <strong>mínimo</strong> para o alerta funcionar corretamente. Ex: mínimo=10, crítico=4.</p>
+          </div>
         </div>
       )}
 

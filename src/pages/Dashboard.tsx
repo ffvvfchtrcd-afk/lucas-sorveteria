@@ -2,8 +2,10 @@ import { useState, useMemo } from 'react'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
 import { useValidade } from '../context/ValidadeContext'
+import { useGastos } from '../context/GastosContext'
+import { usePreco } from '../context/PrecoContext'
 import { aplicarLimites, calcularResumo, getItensCriticos, getItensBaixo, getTotalGeral } from '../utils/estoque'
-import { CATEGORIAS_BASE, getIconeCategoria, ItemEstoque } from '../types'
+import { CATEGORIAS_BASE, getIconeCategoria, ItemEstoque, DESPESA_TIPOS } from '../types'
 import StatusCard from '../components/StatusCard'
 import TabelaEstoque from '../components/TabelaEstoque'
 
@@ -56,9 +58,11 @@ function CardCategoriaDetalhado({ icone, nome, total, ok, baixo, critico }: { ic
 }
 
 export default function Dashboard() {
-  const { data, getLimites, adicionarQuantidade, version } = useStock()
+  const { data, getLimites, adicionarQuantidade, definirQuantidade, todosItens, version } = useStock()
   const { logs, addLog } = useLog()
-  const { getLotesProximosVencer, getLotesVencidos } = useValidade()
+  const { getLotesProximosVencer, getLotesVencidos, removerLote } = useValidade()
+  const { adicionarDespesa } = useGastos()
+  const { precos } = usePreco()
   const [aba, setAba] = useState<Aba>('geral')
 
   const dados = useMemo(() => ({
@@ -233,9 +237,10 @@ function getSaudeCor(pct: number) {
                 </div>
               )}
               {(lotesVencidos.length > 0 || lotesProximos.length > 0) && (
-                <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
+                <div className={`mt-2 p-3 rounded-lg border ${lotesVencidos.length > 0 ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900' : 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900'}`}>
                   <p className="text-xs font-medium text-red-700 dark:text-red-300">
-                    📅 {lotesVencidos.length} lote(s) vencido(s) · {lotesProximos.length} a vencer em 15 dias
+                    📅 {lotesVencidos.length} lote(s) vencido(s) — <button onClick={() => setAba('geral')} className="underline">descartar abaixo</button>
+                    {lotesProximos.length > 0 && <> · {lotesProximos.length} a vencer em 15 dias</>}
                   </p>
                 </div>
               )}
@@ -311,27 +316,49 @@ function getSaudeCor(pct: number) {
                 <div className="space-y-3">
                   {lotesVencidos.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1.5">🔴 Vencidos ({lotesVencidos.length})</p>
-                      <div className="space-y-1">
-                        {lotesVencidos.slice(0, 4).map(l => (
-                          <div key={l.id} className="flex items-center justify-between text-sm py-1">
-                            <span className="text-gray-700 dark:text-gray-300 truncate">{l.itemNome}</span>
-                            <span className="text-xs text-red-500 shrink-0">Venceu {new Date(l.dataValidade).toLocaleDateString('pt-BR')}</span>
-                          </div>
-                        ))}
+                      <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1.5">🔴 Vencidos — jogar fora ({lotesVencidos.length})</p>
+                      <div className="space-y-1.5">
+                        {lotesVencidos.slice(0, 6).map(l => {
+                          const item = todosItens.find(i => i.id === l.itemId)
+                          return (
+                            <div key={l.id} className="flex items-center justify-between gap-2 text-sm py-1.5 px-2 bg-red-50 dark:bg-red-950/30 rounded-lg">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-gray-800 dark:text-gray-200 font-medium text-xs block truncate">{l.itemNome}</span>
+                                <span className="text-[10px] text-red-500">{l.quantidade} {item?.unidade || 'un'} · Venceu {new Date(l.dataValidade).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <button onClick={() => {
+                                if (window.confirm(`Descartar ${l.quantidade} ${item?.unidade || 'un'} de "${l.itemNome}" (vencido)? Isso registra uma perda financeira.`)) {
+                                  const atual = item?.quantidadeAtual ?? 0
+                                  const p = precos.find(p => p.itemId === l.itemId)
+                                  const valorPerda = (p?.precoCusto || 0) * l.quantidade
+                                  definirQuantidade(l.itemId, Math.max(0, atual - l.quantidade))
+                                  removerLote(l.id)
+                                  addLog('perda', l.itemId, l.itemNome, l.quantidade, 'Dashboard', 'Vencido')
+                                  if (valorPerda > 0) {
+                                    adicionarDespesa('perda', valorPerda, `${l.itemNome} vencido (${l.quantidade} ${item?.unidade || 'un'})`, new Date().toISOString().slice(0, 10), `Lote descartado - venceu em ${l.dataValidade}`)
+                                  }
+                                }
+                              }}
+                                className="shrink-0 px-2.5 py-1.5 text-[10px] font-semibold text-red-600 bg-red-100 dark:bg-red-900/50 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 active:bg-red-300 transition-colors">
+                                🗑️ Descartar
+                              </button>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
                   {lotesProximos.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 mb-1.5">🟡 A vencer ({lotesProximos.length})</p>
+                      <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400 mb-1.5">🟡 A vencer em breve ({lotesProximos.length})</p>
                       <div className="space-y-1">
                         {lotesProximos.slice(0, 4).map(l => {
                           const dias = Math.ceil((new Date(l.dataValidade).getTime() - Date.now()) / 86400000)
+                          const item = todosItens.find(i => i.id === l.itemId)
                           return (
                             <div key={l.id} className="flex items-center justify-between text-sm py-1">
-                              <span className="text-gray-700 dark:text-gray-300 truncate">{l.itemNome}</span>
-                              <span className="text-xs text-yellow-500 shrink-0">{dias} dia(s)</span>
+                              <span className="text-gray-700 dark:text-gray-300 truncate text-xs">{l.itemNome}</span>
+                              <span className="text-xs text-yellow-500 shrink-0">{l.quantidade} {item?.unidade || ''} · {dias}d</span>
                             </div>
                           )
                         })}

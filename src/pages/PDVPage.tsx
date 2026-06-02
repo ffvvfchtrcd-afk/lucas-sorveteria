@@ -73,7 +73,7 @@ export default function PDVPage() {
       <div className="flex-1 flex flex-col gap-4 min-h-0">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">🧾 PDV - Venda</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Registre vendas e dê baixa no estoque</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Registre vendas e dê baixa no estoque automaticamente. <strong>Digite o nome</strong> do produto ou <strong>clique</strong> nos botões abaixo.</p>
         </div>
 
         <div className="relative">
@@ -81,7 +81,7 @@ export default function PDVPage() {
             type="text"
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar produto por nome..."
+            placeholder="🔍 Digite o nome do produto..."
             className="w-full px-4 py-3 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
             autoFocus
           />
@@ -109,7 +109,10 @@ export default function PDVPage() {
         </div>
 
         <div className="flex-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 overflow-y-auto">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Produtos Disponíveis</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Produtos Disponíveis</h2>
+            <span className="text-[10px] text-gray-400">Clique em um produto para adicionar ao carrinho</span>
+          </div>
           {(() => {
             const vendaveis = todosItens.filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0)
             const grupos = vendaveis.reduce((acc, item) => {
@@ -151,7 +154,11 @@ export default function PDVPage() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {carrinho.length === 0 ? (
-            <p className="text-center text-gray-400 text-sm py-8">Carrinho vazio</p>
+            <div className="text-center text-gray-400 text-sm py-8">
+            <p className="text-2xl mb-1">🛒</p>
+            <p>Carrinho vazio</p>
+            <p className="text-xs mt-1">Digite o nome do produto ou clique nos botões ao lado para adicionar itens.</p>
+          </div>
           ) : (
             carrinho.map(item => (
               <div key={item.itemId} className="flex items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
