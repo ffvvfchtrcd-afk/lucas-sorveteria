@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useStock } from '../context/StockContext'
 import { useConfig } from '../context/ConfigContext'
 import { CategoriaSlug, LimitesItem, ItemEstoque } from '../types'
+import { carregarDadosExemplo } from '../utils/seed'
 
 type FiltroCategoria = CategoriaSlug | 'todas';
 
@@ -241,6 +242,17 @@ export default function ConfiguracoesPage() {
           <strong>Crítico:</strong> quando o estoque atual chegar neste valor, o item fica <span className="text-red-600">vermelho (crítico)</span> e precisa ser reposto com urgência.<br />
           Os valores salvos ficam armazenados no navegador (localStorage).
         </p>
+      </div>
+
+      <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-1">📦 Dados de Exemplo</h3>
+        <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+          Clique abaixo para preencher preços, vendas, despesas e perdas fictícias — assim você vê o sistema funcionando completo. Seus dados atuais não serão perdidos.
+        </p>
+        <button onClick={carregarDadosExemplo}
+          className="px-4 py-2.5 text-sm font-bold text-white bg-amber-600 rounded-xl hover:bg-amber-700 active:bg-amber-800 transition-colors">
+          🔄 Carregar Dados de Exemplo
+        </button>
       </div>
     </div>
   )
