@@ -145,7 +145,7 @@ export default function GastosPage() {
   }, [filtradas])
 
   const meses = useMemo(() => {
-    const set = new Set(despesas.map(d => d.data.slice(0, 7)))
+    const set = new Set(despesas.map(d => (d.data || '').slice(0, 7)))
     const lista = Array.from(set).sort().reverse()
     const atual = new Date().toISOString().slice(0, 7)
     if (!lista.includes(atual)) lista.unshift(atual)

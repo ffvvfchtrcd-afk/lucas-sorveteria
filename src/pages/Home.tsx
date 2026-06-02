@@ -34,8 +34,8 @@ export default function Home() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 px-6">
-      <div className="text-center mb-10">
+    <div className="min-h-dvh overflow-y-auto flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 px-6 py-10">
+      <div className="text-center mb-10 shrink-0">
         <div className="text-5xl mb-4">🏪</div>
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Gestão de Estoque</h1>
         <p className="text-gray-400 dark:text-gray-500 mt-2">Selecione o módulo desejado</p>
@@ -60,7 +60,7 @@ export default function Home() {
           </button>
         ))}
       </div>
-      <p className="text-xs text-gray-400 dark:text-gray-600 mt-10">v3.0</p>
+      <p className="text-xs text-gray-400 dark:text-gray-600 mt-10 shrink-0">v3.0</p>
     </div>
   )
 }

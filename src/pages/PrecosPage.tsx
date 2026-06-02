@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useStock } from '../context/StockContext'
 import { usePreco } from '../context/PrecoContext'
-import { CategoriaSlug, CATEGORIAS_BASE } from '../types'
+import { CATEGORIAS_BASE } from '../types'
 
 export default function PrecosPage() {
   const { todosItens } = useStock()
   const { precos, setPreco, removerPreco } = usePreco()
 
-  const [filtro, setFiltro] = useState<CategoriaSlug | 'todas'>('todas')
+  const [filtro, setFiltro] = useState<string>('todas')
   const [editando, setEditando] = useState<string | null>(null)
   const [editCusto, setEditCusto] = useState(0)
   const [editVenda, setEditVenda] = useState(0)

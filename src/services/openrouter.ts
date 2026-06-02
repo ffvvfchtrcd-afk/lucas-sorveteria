@@ -52,7 +52,7 @@ export async function chatCompletion({ messages, tools, apiKey }: ChatOptions): 
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
+      'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : '',
       'X-Title': 'Dashboard Estoque',
     },
     body: JSON.stringify(body),

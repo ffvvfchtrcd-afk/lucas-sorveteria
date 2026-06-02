@@ -1,15 +1,7 @@
 [
-  { "id": "sor-001", "nome": "Sorvete Creme 2L", "categoria": "sorvetes", "quantidadeAtual": 6, "quantidadeMinima": 4, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
-  { "id": "sor-002", "nome": "Sorvete Chocolate 2L", "categoria": "sorvetes", "quantidadeAtual": 3, "quantidadeMinima": 4, "unidade": "un", "alerta": "baixo", "ultimaAtualizacao": "2026-05-28" },
-  { "id": "sor-003", "nome": "Sorvete Morango 2L", "categoria": "sorvetes", "quantidadeAtual": 4, "quantidadeMinima": 3, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-29" },
-  { "id": "sor-004", "nome": "Sorvete Flocos 2L", "categoria": "sorvetes", "quantidadeAtual": 1, "quantidadeMinima": 3, "unidade": "un", "alerta": "critico", "ultimaAtualizacao": "2026-05-22" },
-  { "id": "sor-005", "nome": "Picolé Chocolate", "categoria": "sorvetes", "quantidadeAtual": 48, "quantidadeMinima": 24, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
-  { "id": "sor-006", "nome": "Picolé Frutas", "categoria": "sorvetes", "quantidadeAtual": 12, "quantidadeMinima": 24, "unidade": "un", "alerta": "critico", "ultimaAtualizacao": "2026-05-19" },
-  { "id": "sor-007", "nome": "Picolé Creme", "categoria": "sorvetes", "quantidadeAtual": 30, "quantidadeMinima": 20, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
-  { "id": "sor-008", "nome": "Cobertura Chocolate 500g", "categoria": "sorvetes", "quantidadeAtual": 500, "quantidadeMinima": 1000, "unidade": "g", "alerta": "baixo", "ultimaAtualizacao": "2026-05-26" },
-  { "id": "sor-009", "nome": "Cobertura Morango 500g", "categoria": "sorvetes", "quantidadeAtual": 1200, "quantidadeMinima": 500, "unidade": "g", "alerta": "ok", "ultimaAtualizacao": "2026-05-30" },
-  { "id": "sor-010", "nome": "Cobertura Caramelo 500g", "categoria": "sorvetes", "quantidadeAtual": 200, "quantidadeMinima": 500, "unidade": "g", "alerta": "critico", "ultimaAtualizacao": "2026-05-20" },
-  { "id": "sor-011", "nome": "Casquinha Crocante", "categoria": "sorvetes", "quantidadeAtual": 80, "quantidadeMinima": 50, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-29" },
-  { "id": "sor-012", "nome": "Palito de Picolé", "categoria": "sorvetes", "quantidadeAtual": 300, "quantidadeMinima": 200, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-28" },
-  { "id": "sor-013", "nome": "Copo para Sorvete 300ml", "categoria": "sorvetes", "quantidadeAtual": 90, "quantidadeMinima": 100, "unidade": "un", "alerta": "baixo", "ultimaAtualizacao": "2026-05-25" }
+  { "id": "sor-001", "nome": "Sorvete Creme 2L", "categoria": "sorvetes", "quantidadeAtual": 6, "quantidadeMinima": 4, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-06-01" },
+  { "id": "sor-002", "nome": "Sorvete Chocolate 2L", "categoria": "sorvetes", "quantidadeAtual": 3, "quantidadeMinima": 4, "unidade": "un", "alerta": "baixo", "ultimaAtualizacao": "2026-05-30" },
+  { "id": "sor-003", "nome": "Sorvete Morango 2L", "categoria": "sorvetes", "quantidadeAtual": 4, "quantidadeMinima": 3, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-06-01" },
+  { "id": "sor-004", "nome": "Casquinha Crocante", "categoria": "sorvetes", "quantidadeAtual": 80, "quantidadeMinima": 50, "unidade": "un", "alerta": "ok", "ultimaAtualizacao": "2026-05-29" },
+  { "id": "sor-005", "nome": "Copo para Sorvete 300ml", "categoria": "sorvetes", "quantidadeAtual": 90, "quantidadeMinima": 100, "unidade": "un", "alerta": "baixo", "ultimaAtualizacao": "2026-05-25" }
 ]

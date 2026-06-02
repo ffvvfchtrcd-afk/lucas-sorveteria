@@ -8,7 +8,7 @@ import { useValidade } from '../context/ValidadeContext'
 import { useGastos } from '../context/GastosContext'
 import { chatCompletionWithRetry, Message, ToolCall, ToolDefinition } from '../services/openrouter'
 import { db } from '../services/database'
-import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES, DESPESA_TIPOS, DespesaTipo, Despesa } from '../types'
+import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES, DESPESA_TIPOS, DespesaTipo, Despesa, TipoMovimentacao } from '../types'
 
 const API_KEY_STORAGE = 'openrouter_key';
 
@@ -185,7 +185,7 @@ function executarTool(
   getLimites: (id: string, d: { minimo: number }) => LimitesItem,
   buscarItemPorNome: (nome: string) => ItemEstoque | null,
   todosItens: ItemEstoque[],
-  addLog?: (tipo: string, itemId: string, itemNome: string, quantidade: number, origem?: string) => void,
+  addLog?: (tipo: TipoMovimentacao, itemId: string, itemNome: string, quantidade: number, origem?: string, motivo?: string) => void,
   adicionarItemPersonalizado?: (item: CustomItemInput) => void,
   editarItemPersonalizado?: (itemId: string, updates: Partial<CustomItemInput>) => void,
   removerItemPersonalizado?: (itemId: string) => void,
@@ -197,7 +197,7 @@ function executarTool(
   const args = JSON.parse(toolCall.function.arguments)
 
   function calcularFinanceiro(inicio: string, fim: string) {
-    const vendas = (logs || []).filter(l => l.tipo === 'venda' && l.data.slice(0, 10) >= inicio && l.data.slice(0, 10) <= fim)
+    const vendas = (logs || []).filter(l => l.tipo === 'venda' && (l.data || '').slice(0, 10) >= inicio && (l.data || '').slice(0, 10) <= fim)
     const receita = vendas.reduce((s, v) => {
       const p = (precos || []).find(p => p.itemId === v.itemId)
       return s + (p?.precoVenda || 0) * v.quantidade

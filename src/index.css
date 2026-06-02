@@ -25,4 +25,7 @@ body.dark {
     background: #cbd5e1;
     border-radius: 3px;
   }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

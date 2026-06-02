@@ -15,7 +15,7 @@ const categorias: { slug: FiltroCategoria; nome: string }[] = [
 interface ItemFormState {
   id: string;
   nome: string;
-  categoria: CategoriaSlug;
+  categoria: string;
   quantidadeAtual: number;
   minimo: number;
   critico: number;

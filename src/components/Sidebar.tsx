@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
 import { useSidebar } from '../App'
 
 function useModulo() {
@@ -32,6 +33,7 @@ const gruposFinanceiro = [
     links: [
       { to: '/financeiro/resumo', label: 'Resumo', icon: '📈' },
       { to: '/financeiro/gastos', label: 'Lançamentos', icon: '💸' },
+      { to: '/financeiro/metas', label: 'Metas', icon: '🎯' },
     ],
   },
 ]
@@ -69,36 +71,48 @@ const gruposEstoqueBase = [
 
 const tabsCaixa = [
   { to: '/caixa/pdv', label: 'Vender', icon: '🧾' },
-  { to: '/caixa/movimentacoes', label: 'Mov.', icon: '📋' },
-  { to: '/caixa/relatorios', label: 'Relát.', icon: '📈' },
+  { to: '/caixa/movimentacoes', label: 'Histórico', icon: '📋' },
+  { to: '/caixa/relatorios', label: 'Relatórios', icon: '📈' },
 ]
 
 const tabsEstoque = [
   { to: '/estoque', label: 'Início', icon: '📊' },
-  { to: '/estoque/producao', label: 'Produzir', icon: '🏭' },
+  { to: '/estoque/produtos', label: 'Produtos', icon: '📦' },
   { to: '/estoque/chat', label: 'IA', icon: '🤖' },
 ]
 
 const tabsFinanceiro = [
   { to: '/financeiro/resumo', label: 'Resumo', icon: '📈' },
   { to: '/financeiro/gastos', label: 'Gastos', icon: '💸' },
+  { to: '/financeiro/metas', label: 'Metas', icon: '🎯' },
 ]
+
+const MODULOS = [
+  { id: 'caixa', label: 'CAIXA', icon: '🧾', path: '/caixa/pdv', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+  { id: 'estoque', label: 'ESTOQUE', icon: '📦', path: '/estoque', color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
+  { id: 'financeiro', label: 'FINANCEIRO', icon: '💰', path: '/financeiro/resumo', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+] as const
 
 export default function Sidebar() {
   const modulo = useModulo()
   const { theme, toggle } = useTheme()
   const { open, close, toggle: toggleSidebar } = useSidebar()
+  const { user, logout, isAdmin } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
-  const gruposEstoque = gruposEstoqueBase
+  const gruposEstoque = isAdmin ? gruposEstoqueBase : gruposEstoqueBase.filter(g =>
+    g.label === 'Operações' || g.label === 'Inteligência'
+  )
 
   const isActive = (path: string) => {
     if (path === '/estoque') return location.pathname === '/estoque'
     return location.pathname.startsWith(path)
   }
 
-  const gruposAtivos = modulo === 'caixa' ? gruposCaixa : modulo === 'financeiro' ? gruposFinanceiro : gruposEstoque
+  const gruposAtivos = modulo === 'caixa' ? gruposCaixa
+    : modulo === 'financeiro' ? (isAdmin ? gruposFinanceiro : [])
+    : gruposEstoque
 
   const moduleInfo = modulo === 'caixa'
     ? { label: 'CAIXA', icon: '🧾', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800' }
@@ -140,6 +154,15 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
+        {user && (
+          <div className="flex items-center justify-between px-4 py-1.5">
+            <span className="text-xs text-gray-400">
+              {user.nome} <span className="text-[10px]">({user.papel})</span>
+            </span>
+            <button onClick={() => { logout(); navigate('/login') }}
+              className="text-[10px] text-red-400 hover:text-red-600">Sair</button>
+          </div>
+        )}
         <button onClick={toggle}
           className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
           <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
@@ -155,39 +178,65 @@ export default function Sidebar() {
   const menuOverlay = (
     <div className="fixed inset-0 z-50 md:hidden transition-opacity duration-200" onClick={close}>
       <div className="absolute inset-0 bg-black/50 animate-fadeIn" />
-      <div className="absolute left-0 top-0 h-full shadow-xl bg-white dark:bg-gray-900 w-72 animate-slide-in" onClick={e => e.stopPropagation()}>
+      <div className="absolute right-0 top-0 h-full shadow-xl bg-white dark:bg-gray-900 w-80 animate-slide-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <span className="text-lg">{moduleInfo.icon}</span>
-            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{moduleInfo.label}</h2>
+            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">{moduleInfo.label}</h2>
           </div>
-          <button onClick={close} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-colors text-xl">✕</button>
+          <button onClick={close} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
         <nav className="overflow-y-auto p-4 space-y-4" style={{ height: 'calc(100% - 60px)' }}>
-          <button onClick={() => { close(); navigate('/') }}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mb-2">
-            ← Trocar módulo
-          </button>
+          {/* Seletor de módulo */}
+          <div className="grid grid-cols-3 gap-2">
+            {MODULOS.map(m => {
+              const ativo = modulo === m.id
+              return (
+                <button key={m.id} onClick={() => { close(); navigate(m.path) }}
+                  className={`flex flex-col items-center gap-1 py-3 rounded-xl text-xs font-semibold transition-all ${
+                    ativo ? `${m.bg} ${m.color} ring-2 ring-offset-1 ring-gray-200 dark:ring-gray-700` : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}>
+                  <span className="text-xl">{m.icon}</span>
+                  <span>{m.label.slice(0, 4)}</span>
+                </button>
+              )
+            })}
+          </div>
+          <hr className="border-gray-100 dark:border-gray-800" />
+          {/* Links do módulo atual */}
           {gruposAtivos.map(grupo => (
             <div key={grupo.label}>
               <p className="px-4 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">{grupo.label}</p>
               {grupo.links.map(link => (
                 <NavLink key={link.to} to={link.to} end={link.to === '/estoque'} onClick={close}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`
                   }>
-                  <span>{link.icon}</span>
+                  <span className="text-lg">{link.icon}</span>
                   {link.label}
                 </NavLink>
               ))}
             </div>
           ))}
-          <button onClick={toggle}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <hr className="border-gray-100 dark:border-gray-800" />
+          {/* Preferências */}
+          {user && (
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-xs text-gray-400">{user.nome} · <span className="capitalize">{user.papel}</span></span>
+              <button onClick={() => { close(); logout(); navigate('/login') }}
+                className="text-xs text-red-400 hover:text-red-600">Sair</button>
+            </div>
+          )}
+          <button onClick={() => { close(); navigate('/') }}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            🏪 Módulos
+          </button>
+          <button onClick={() => { close(); toggle() }}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
             {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
           </button>
@@ -202,30 +251,36 @@ export default function Sidebar() {
       <div className="hidden md:flex h-full">{desktopSidebar}</div>
 
       {/* Mobile bottom tab bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pb-safe">
-        <div className="flex items-center justify-around">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
+        <div className="grid grid-cols-4 items-stretch">
           {tabsMobile.map(tab => {
             const active = isActive(tab.to)
             return (
               <NavLink key={tab.to} to={tab.to} end={tab.to === '/estoque'}
                 onClick={close}
-                className={`relative flex flex-col items-center justify-center py-1.5 px-3 min-w-0 transition-colors min-h-[48px] ${
+                className={`relative flex flex-col items-center justify-center py-1.5 px-1 transition-colors min-h-[52px] ${
                   active
-                    ? modulo === 'caixa' ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
+                    ? modulo === 'caixa' ? 'text-emerald-600 dark:text-emerald-400' : modulo === 'financeiro' ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-400 dark:text-gray-500 active:text-gray-600'
                 }`}>
-                {active && <span className={`absolute top-0 left-1/4 right-1/4 h-0.5 rounded-full ${modulo === 'caixa' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />}
-                <span className={`text-xl leading-none transition-transform duration-150 ${active ? 'scale-110' : ''}`}>{tab.icon}</span>
-                <span className={`text-[10px] mt-0.5 font-medium whitespace-nowrap ${active ? 'font-bold' : ''}`}>{tab.label}</span>
+                {active && <span className={`absolute top-0 left-1/4 right-1/4 h-0.5 rounded-full ${
+                  modulo === 'caixa' ? 'bg-emerald-500' : modulo === 'financeiro' ? 'bg-amber-500' : 'bg-indigo-500'
+                }`} />}
+                <span className="text-xl leading-none">{tab.icon}</span>
+                <span className={`text-[10px] mt-0.5 font-medium ${active ? 'font-bold' : ''}`}>{tab.label}</span>
               </NavLink>
             )
           })}
           <button onClick={toggleSidebar}
-            className={`relative flex flex-col items-center justify-center py-1.5 px-3 min-h-[48px] transition-colors ${
-              open ? moduleInfo.color : 'text-gray-400 dark:text-gray-500 active:text-gray-600'
+            className={`relative flex flex-col items-center justify-center py-1.5 px-1 min-h-[52px] transition-colors ${
+              open
+                ? modulo === 'caixa' ? 'text-emerald-600' : modulo === 'financeiro' ? 'text-amber-600' : 'text-indigo-600'
+                : 'text-gray-400 dark:text-gray-500 active:text-gray-600'
             }`}>
-            {open && <span className={`absolute top-0 left-1/4 right-1/4 h-0.5 rounded-full ${modulo === 'caixa' ? 'bg-emerald-500' : 'bg-indigo-500'}`} />}
-            <span className={`text-xl leading-none transition-transform duration-150 ${open ? 'scale-110' : ''}`}>☰</span>
+            {open && <span className={`absolute top-0 left-1/4 right-1/4 h-0.5 rounded-full ${
+              modulo === 'caixa' ? 'bg-emerald-500' : modulo === 'financeiro' ? 'bg-amber-500' : 'bg-indigo-500'
+            }`} />}
+            <span className="text-xl leading-none">☰</span>
             <span className="text-[10px] mt-0.5 font-medium">Menu</span>
           </button>
         </div>

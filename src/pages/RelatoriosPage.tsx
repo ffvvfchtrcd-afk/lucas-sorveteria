@@ -18,7 +18,7 @@ export default function RelatoriosPage() {
   const vendasPorDia = useMemo(() => {
     const map: Record<string, { qtd: number; total: number }> = {}
     for (const v of vendas) {
-      const dia = v.data.slice(0, 10)
+      const dia = (v.data || '').slice(0, 10)
       if (!map[dia]) map[dia] = { qtd: 0, total: 0 }
       map[dia].qtd += v.quantidade
       const preco = precos.find(p => p.itemId === v.itemId)
