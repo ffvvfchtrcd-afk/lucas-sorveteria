@@ -96,6 +96,7 @@ Você TEM acesso a funções para consultar TUDO — estoque, finanças, validad
 - adicionar_estoque / definir_estoque — alterar qtd
 - criar_item / editar_item / remover_item — CRUD completo
 - resumo_para_compras — lista de compras
+- **definir_preco** — DEFINE preço de custo e/ou venda de um produto. PERSISTE no localStorage. Use quando pedirem "coloca o sorvete a R$25" / "custo 10, venda 20" / "atualiza o preço do morango". Se o usuário informar só um dos preços, mantenha o outro.
 
 ### 💰 Finanças
 - resumo_financeiro — lucro, receita, despesas (com período)
@@ -170,6 +171,7 @@ function buildTools(todos: ItemEstoque[]): ToolDefinition[] {
     { type: 'function', function: { name: 'editar_item', description: 'EDITA nome, categoria, tipo, unidade ou qtd mínima de um item', parameters: { type: 'object', properties: { item_id: { type: 'string' }, nome: { type: 'string' }, categoria: { type: 'string' }, tipo: { type: 'string', enum: ['venda', 'producao', 'ambos'] }, unidade: { type: 'string', enum: ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo'] }, quantidade_minima: { type: 'number' } }, required: ['item_id'] } } },
     { type: 'function', function: { name: 'remover_item', description: 'REMOVE um produto permanentemente. SEMPRE confirme antes.', parameters: { type: 'object', properties: { item_id: { type: 'string' } }, required: ['item_id'] } } },
     { type: 'function', function: { name: 'resumo_para_compras', description: 'Gera lista de tudo que precisa ser comprado, separado por categoria', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'definir_preco', description: 'DEFINE o preço de custo e/ou preço de venda de um produto. Use quando o usuário pedir para definir, alterar ou atualizar o preço. Persiste no localStorage. Se o usuário não informar um dos preços, mantenha o valor atual.', parameters: { type: 'object', properties: { item_id: { type: 'string', description: `ID do item. IDs:\n${itensStr}` }, preco_custo: { type: 'number', description: 'Preço de CUSTO (quanto você paga). Se não informado, mantém o atual.' }, preco_venda: { type: 'number', description: 'Preço de VENDA (quanto o cliente paga). Se não informado, mantém o atual.' } }, required: ['item_id'] } } },
 
     // ─── FINANÇAS ───
     { type: 'function', function: { name: 'resumo_financeiro', description: 'Resumo financeiro completo: receita, custo, lucro bruto/líquido, despesas. Período opcional (YYYY-MM-DD).', parameters: { type: 'object', properties: { inicio: { type: 'string', description: 'Data início YYYY-MM-DD (opcional)' }, fim: { type: 'string', description: 'Data fim YYYY-MM-DD (opcional)' } } } } },
@@ -205,6 +207,7 @@ function executarTool(
   removerItemPersonalizado?: (itemId: string) => void,
   logs?: { tipo: string; quantidade: number; data: string; itemId: string }[],
   precos?: { itemId: string; precoCusto: number; precoVenda: number }[],
+  setPreco?: (itemId: string, itemNome: string, precoCusto: number, precoVenda: number) => void,
   adicionarDespesa?: (tipo: DespesaTipo, valor: number, descricao: string, data: string, observacao?: string) => void,
   despesas?: Despesa[],
 ): string {
@@ -371,6 +374,29 @@ function executarTool(
         }
       }
       return JSON.stringify(categorias)
+    }
+
+    case 'definir_preco': {
+      const id = args.item_id
+      if (!id) return JSON.stringify({ erro: 'ID do item é obrigatório' })
+      const item = todosItens.find(i => i.id === id)
+      if (!item) return JSON.stringify({ erro: `Item com ID "${id}" não encontrado. Use buscar_item para localizar.` })
+      if (!setPreco) return JSON.stringify({ erro: 'Função de preço indisponível no momento' })
+
+      const precoAtual = (precos || []).find(p => p.itemId === id)
+      const custo = args.preco_custo !== undefined && args.preco_custo !== null ? Number(args.preco_custo) : (precoAtual?.precoCusto ?? 0)
+      const venda = args.preco_venda !== undefined && args.preco_venda !== null ? Number(args.preco_venda) : (precoAtual?.precoVenda ?? 0)
+      if (isNaN(custo) || custo < 0 || isNaN(venda) || venda < 0) {
+        return JSON.stringify({ erro: 'Preços devem ser números >= 0' })
+      }
+      setPreco(id, item.nome, custo, venda)
+
+      const margem = custo > 0 ? `${(((venda - custo) / custo) * 100).toFixed(0)}%` : 'N/A'
+      return JSON.stringify({
+        sucesso: true,
+        mensagem: `✅ Preço de "${item.nome}" salvo!\n💵 Custo: R$ ${custo.toFixed(2)}\n🏷️ Venda: R$ ${venda.toFixed(2)}\n📈 Margem: ${margem}`,
+        item: item.nome, item_id: id, preco_custo: custo, preco_venda: venda, margem,
+      })
     }
 
     case 'resumo_financeiro': {
@@ -555,7 +581,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
 export default function ChatPage() {
   const { data, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado } = useStock()
   const { addLog, logs } = useLog()
-  const { precos } = usePreco()
+  const { precos, setPreco } = usePreco()
   const { despesas, adicionarDespesa } = useGastos()
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '')
   const [keyInput, setKeyInput] = useState(apiKey)
@@ -629,7 +655,7 @@ export default function ChatPage() {
         history.push(result.message)
 
         for (const tc of result.toolCalls) {
-          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado, logs, precos, adicionarDespesa, despesas)
+          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado, logs, precos, setPreco, adicionarDespesa, despesas)
           history.push({ role: 'tool', content: toolResult, tool_call_id: tc.id })
         }
 
