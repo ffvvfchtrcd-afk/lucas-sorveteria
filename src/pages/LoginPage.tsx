@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const usersPredef = [
@@ -10,12 +10,14 @@ const usersPredef = [
 export default function LoginPage() {
   const { login, isLoggedIn } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from || '/estoque'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [erro, setErro] = useState('')
 
   if (isLoggedIn) {
-    navigate('/estoque', { replace: true })
+    navigate(from, { replace: true })
     return null
   }
 
@@ -27,7 +29,7 @@ export default function LoginPage() {
     }
     const err = login(username.trim(), password)
     if (err) setErro(err)
-    else navigate('/estoque', { replace: true })
+    else navigate(from, { replace: true })
   }
 
   return (
