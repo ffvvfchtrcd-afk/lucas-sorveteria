@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, Suspense, lazy } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { StockProvider } from './context/StockContext'
@@ -11,29 +11,33 @@ import { GastosProvider } from './context/GastosContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import { ToastProvider } from './context/ToastContext'
+import { ConfirmProvider } from './context/ConfirmContext'
 import Sidebar from './components/Sidebar'
 import BuscaGlobal from './components/BuscaGlobal'
+import RoleGuard from './components/RoleGuard'
 import Home from './pages/Home'
 import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
-import AcaiPage from './pages/AcaiPage'
-import SorvetesPage from './pages/SorvetesPage'
-import MateriasPrimasPage from './pages/MateriasPrimasPage'
-import ConfiguracoesPage from './pages/ConfiguracoesPage'
-import ChatPage from './pages/ChatPage'
-import CadastroPage from './pages/CadastroPage'
-import PDVPage from './pages/PDVPage'
-import ProducaoPage from './pages/ProducaoPage'
-import MovimentacoesPage from './pages/MovimentacoesPage'
-import PrecosPage from './pages/PrecosPage'
-import ValidadesPage from './pages/ValidadesPage'
-import RelatoriosPage from './pages/RelatoriosPage'
-import CategoriaPage from './pages/CategoriaPage'
-import ProdutosPage from './pages/ProdutosPage'
-import GastosPage from './pages/GastosPage'
-import FinanceiroPage from './pages/FinanceiroPage'
-import MetasPage from './pages/MetasPage'
-import UsuariosPage from './pages/UsuariosPage'
+import LoadingFallback from './components/LoadingFallback'
+
+const AcaiPage = lazy(() => import('./pages/AcaiPage'))
+const SorvetesPage = lazy(() => import('./pages/SorvetesPage'))
+const MateriasPrimasPage = lazy(() => import('./pages/MateriasPrimasPage'))
+const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage'))
+const ChatPage = lazy(() => import('./pages/ChatPage'))
+const CadastroPage = lazy(() => import('./pages/CadastroPage'))
+const PDVPage = lazy(() => import('./pages/PDVPage'))
+const ProducaoPage = lazy(() => import('./pages/ProducaoPage'))
+const MovimentacoesPage = lazy(() => import('./pages/MovimentacoesPage'))
+const PrecosPage = lazy(() => import('./pages/PrecosPage'))
+const ValidadesPage = lazy(() => import('./pages/ValidadesPage'))
+const RelatoriosPage = lazy(() => import('./pages/RelatoriosPage'))
+const CategoriaPage = lazy(() => import('./pages/CategoriaPage'))
+const ProdutosPage = lazy(() => import('./pages/ProdutosPage'))
+const GastosPage = lazy(() => import('./pages/GastosPage'))
+const FinanceiroPage = lazy(() => import('./pages/FinanceiroPage'))
+const MetasPage = lazy(() => import('./pages/MetasPage'))
+const UsuariosPage = lazy(() => import('./pages/UsuariosPage'))
 
 interface SidebarCtx {
   open: boolean
@@ -70,6 +74,7 @@ export default function App() {
       <NotificationProvider>
       <ConfigProvider>
         <ToastProvider>
+        <ConfirmProvider>
         <SidebarContext.Provider value={{ open, toggle: () => setOpen(v => !v), close: () => setOpen(false) }}>
         {isHome ? (
           <Home />
@@ -84,14 +89,15 @@ export default function App() {
                 <BuscaGlobal />
               </div>
               <div key={location.pathname} className="animate-fadeIn max-w-full">
+              <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/estoque" element={<Dashboard />} />
                 <Route path="/estoque/acai" element={<AcaiPage />} />
                 <Route path="/estoque/sorvetes" element={<SorvetesPage />} />
                 <Route path="/estoque/materias-primas" element={<MateriasPrimasPage />} />
-                <Route path="/estoque/configuracoes" element={<ConfiguracoesPage />} />
+                <Route path="/estoque/configuracoes" element={<RoleGuard adminOnly><ConfiguracoesPage /></RoleGuard>} />
                 <Route path="/estoque/chat" element={<ChatPage />} />
-                <Route path="/estoque/cadastro" element={<CadastroPage />} />
+                <Route path="/estoque/cadastro" element={<RoleGuard adminOnly><CadastroPage /></RoleGuard>} />
                 <Route path="/estoque/producao" element={<ProducaoPage />} />
                 <Route path="/estoque/precos" element={<PrecosPage />} />
                 <Route path="/estoque/validades" element={<ValidadesPage />} />
@@ -99,19 +105,21 @@ export default function App() {
 
                 <Route path="/caixa/pdv" element={<PDVPage />} />
                 <Route path="/caixa/movimentacoes" element={<MovimentacoesPage />} />
-                <Route path="/caixa/relatorios" element={<RelatoriosPage />} />
+                <Route path="/caixa/relatorios" element={<RoleGuard adminOnly><RelatoriosPage /></RoleGuard>} />
                 <Route path="/estoque/produtos" element={<ProdutosPage />} />
                 <Route path="/financeiro/gastos" element={<GastosPage />} />
-                <Route path="/financeiro/resumo" element={<FinanceiroPage />} />
-                <Route path="/financeiro/metas" element={<MetasPage />} />
-                <Route path="/financeiro/usuarios" element={<UsuariosPage />} />
+                <Route path="/financeiro/resumo" element={<RoleGuard adminOnly><FinanceiroPage /></RoleGuard>} />
+                <Route path="/financeiro/metas" element={<RoleGuard adminOnly><MetasPage /></RoleGuard>} />
+                <Route path="/financeiro/usuarios" element={<RoleGuard adminOnly><UsuariosPage /></RoleGuard>} />
               </Routes>
+              </Suspense>
               </div>
             </main>
           </div>
           </AuthGuard>
         )}
         </SidebarContext.Provider>
+        </ConfirmProvider>
         </ToastProvider>
       </ConfigProvider>
       </NotificationProvider>

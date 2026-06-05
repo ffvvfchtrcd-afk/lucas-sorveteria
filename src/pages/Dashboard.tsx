@@ -8,6 +8,7 @@ import { aplicarLimites, calcularResumo, getItensCriticos, getItensBaixo, getTot
 import { CATEGORIAS_BASE, getIconeCategoria, ItemEstoque, DESPESA_TIPOS } from '../types'
 import StatusCard from '../components/StatusCard'
 import TabelaEstoque from '../components/TabelaEstoque'
+import { useConfirm } from '../context/ConfirmContext'
 
 type Aba = 'geral' | 'repor' | 'categorias'
 
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const { getLotesProximosVencer, getLotesVencidos, removerLote } = useValidade()
   const { adicionarDespesa } = useGastos()
   const { precos } = usePreco()
+  const confirm = useConfirm()
   const [aba, setAba] = useState<Aba>('geral')
 
   const dados = useMemo(() => ({
@@ -326,8 +328,8 @@ function getSaudeCor(pct: number) {
                                 <span className="text-gray-800 dark:text-gray-200 font-medium text-xs block truncate">{l.itemNome}</span>
                                 <span className="text-[10px] text-red-500">{l.quantidade} {item?.unidade || 'un'} · Venceu {new Date(l.dataValidade).toLocaleDateString('pt-BR')}</span>
                               </div>
-                              <button onClick={() => {
-                                if (window.confirm(`Descartar ${l.quantidade} ${item?.unidade || 'un'} de "${l.itemNome}" (vencido)? Isso registra uma perda financeira.`)) {
+                              <button onClick={async () => {
+                                if (await confirm({ title: 'Descartar lote vencido?', message: `Descartar ${l.quantidade} ${item?.unidade || 'un'} de "${l.itemNome}" (vencido)? Isso registra uma perda financeira.`, confirmText: 'Descartar', variant: 'danger', icon: '🗑️' })) {
                                   const atual = item?.quantidadeAtual ?? 0
                                   const p = precos.find(p => p.itemId === l.itemId)
                                   const valorPerda = (p?.precoCusto || 0) * l.quantidade

@@ -3,6 +3,7 @@ import { useGastos } from '../context/GastosContext'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
 import { useToast } from '../context/ToastContext'
+import { useConfirm } from '../context/ConfirmContext'
 import { DESPESA_TIPOS, DespesaTipo } from '../types'
 
 interface LotePreview {
@@ -78,6 +79,7 @@ export default function GastosPage() {
   const { adicionarQuantidade, definirQuantidade, todosItens } = useStock()
   const { addLog } = useLog()
   const toast = useToast()
+  const confirm = useConfirm()
   const [mostrarForm, setMostrarForm] = useState(false)
   const [tipo, setTipo] = useState<DespesaTipo>('energia')
   const [valor, setValor] = useState(0)
@@ -354,7 +356,7 @@ export default function GastosPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-semibold text-red-600">-R$ {d.valor.toFixed(2)}</span>
-                      <button onClick={() => { if (window.confirm(`Remover "${d.descricao}"?`)) { removerDespesa(d.id); toast.info('Despesa removida', d.descricao) } }}
+                      <button onClick={async () => { if (await confirm({ title: 'Remover despesa?', message: `Remover "${d.descricao}"?`, confirmText: 'Remover', variant: 'danger', icon: '🗑️' })) { removerDespesa(d.id); toast.info('Despesa removida', d.descricao) } }}
                         className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
                     </div>
                   </div>

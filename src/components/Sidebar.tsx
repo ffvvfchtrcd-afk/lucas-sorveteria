@@ -229,6 +229,7 @@ export default function Sidebar() {
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-xs text-gray-400">{user.nome} · <span className="capitalize">{user.papel}</span></span>
               <button onClick={() => { close(); logout(); navigate('/login') }}
+                aria-label="Sair da conta"
                 className="text-xs text-red-400 hover:text-red-600">Sair</button>
             </div>
           )}

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useAuth, User } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 export default function UsuariosPage() {
   const { isAdmin, usuarios, adicionarUsuario, editarUsuario, removerUsuario } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [editUsername, setEditUsername] = useState<string | null>(null)
   const [novoUsername, setNovoUsername] = useState('')
@@ -76,8 +78,8 @@ export default function UsuariosPage() {
     setEditUsername(null)
   }
 
-  function handleRemover(u: User) {
-    if (window.confirm(`Remover "${u.nome}" (${u.username})? Esta ação não pode ser desfeita.`)) {
+  async function handleRemover(u: User) {
+    if (await confirm({ title: 'Remover usuário?', message: `Remover "${u.nome}" (${u.username})? Esta ação não pode ser desfeita.`, confirmText: 'Remover', variant: 'danger', icon: '🗑️' })) {
       const erro = removerUsuario(u.username)
       if (erro) {
         toast.erro('Erro ao remover', erro)

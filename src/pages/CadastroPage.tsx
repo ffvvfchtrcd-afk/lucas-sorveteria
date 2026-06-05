@@ -3,10 +3,12 @@ import { useStock } from '../context/StockContext'
 import { CustomItemInput, CATEGORIAS_BASE, UNIDADES, UnidadeMedida, GestaoItem, gestaoFromTipo, GESTAO_PADRAO } from '../types'
 import GestaoChips, { FLAGS_LIST } from '../components/GestaoChips'
 import { useToast } from '../context/ToastContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 export default function CadastroPage() {
   const { customItems, adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado } = useStock()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [nome, setNome] = useState('')
   const [categoria, setCategoria] = useState('materias_primas')
@@ -68,8 +70,8 @@ export default function CadastroPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function handleRemover(id: string, nome: string) {
-    if (window.confirm(`Remover "${nome}" permanentemente? Esta ação não pode ser desfeita.`)) {
+  async function handleRemover(id: string, nome: string) {
+    if (await confirm({ title: 'Remover item?', message: `Remover "${nome}" permanentemente? Esta ação não pode ser desfeita.`, confirmText: 'Remover', variant: 'danger', icon: '🗑️' })) {
       removerItemPersonalizado(id)
       if (editId === id) {
         setEditId(null)

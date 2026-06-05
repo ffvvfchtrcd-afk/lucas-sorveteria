@@ -4,6 +4,16 @@ export type CategoriaSlug = 'acai' | 'sorvetes' | 'materias_primas';
 export type TipoMovimentacao = 'entrada' | 'saida' | 'venda' | 'producao' | 'perda' | 'ajuste';
 export type TipoItem = 'venda' | 'producao' | 'ambos';
 
+export const PAPEIS = {
+  admin: { value: 'admin', label: 'Administrador', short: 'Admin', icon: '🔑' },
+  funcionario: { value: 'funcionario', label: 'Funcionário', short: 'Func.', icon: '👤' },
+} as const
+
+export type Papel = keyof typeof PAPEIS
+
+export const getPapelLabel = (papel: Papel): string => PAPEIS[papel]?.label ?? papel
+export const getPapelIcon = (papel: Papel): string => PAPEIS[papel]?.icon ?? '👤'
+
 export interface GestaoItem {
   permiteEntrada: boolean;
   permiteSaida: boolean;
@@ -54,6 +64,18 @@ export interface LimitesItem {
   critico: number;
 }
 
+export interface LogMovimentacao {
+  id?: string;
+  tipo: TipoMovimentacao;
+  itemId: string;
+  itemNome?: string;
+  quantidade: number;
+  data: string;
+  origem?: string;
+  motivo?: string;
+  usuario?: string;
+}
+
 export interface EstoqueData {
   acai: ItemEstoque[];
   sorvetes: ItemEstoque[];
@@ -81,6 +103,7 @@ export interface Movimentacao {
   data: string;
   motivo?: string;
   origem?: string;
+  usuario?: string;
 }
 
 export interface PrecoItem {
@@ -100,6 +123,7 @@ export interface LoteValidade {
   dataValidade: string;
   dataEntrada: string;
   observacao?: string;
+  unidade?: UnidadeMedida;
 }
 
 export interface VendaItem {

@@ -121,7 +121,7 @@ export default function ReceitaModal({ item, onClose }: Props) {
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">📋 Receita de {item.nome}</h2>
             <p className="text-xs text-gray-400 mt-0.5">Cadastre os ingredientes para calcular o custo automaticamente.</p>
           </div>
-          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 text-xl">✕</button>
+          <button onClick={onClose} aria-label="Fechar modal" className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 text-xl">✕</button>
         </div>
 
         {salvo && (
@@ -191,7 +191,7 @@ export default function ReceitaModal({ item, onClose }: Props) {
                       <p className="text-[10px] text-gray-500">subtotal</p>
                       <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">R$ {(custoUnitario(i.itemId) * i.quantidade).toFixed(2)}</p>
                     </div>
-                    <button onClick={() => removerItem(i.itemId)} title="Remover ingrediente" className="shrink-0 w-7 h-7 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 rounded transition-colors">✕</button>
+                    <button onClick={() => removerItem(i.itemId)} title="Remover ingrediente" aria-label="Remover ingrediente" className="shrink-0 w-7 h-7 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 rounded transition-colors">✕</button>
                   </div>
                 ))}
               </div>

@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 import { Movimentacao, TipoMovimentacao } from '../types'
+import { useAuth } from './AuthContext'
 
 const STORAGE_KEY = 'estoque_movimentacoes'
 
@@ -22,6 +23,7 @@ function carregarLogs(): Movimentacao[] {
 
 export function LogProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<Movimentacao[]>(carregarLogs)
+  const { user } = useAuth()
 
   const salvarLogs = useCallback((novos: Movimentacao[]) => {
     setLogs(novos)
@@ -45,13 +47,14 @@ export function LogProvider({ children }: { children: ReactNode }) {
       data: new Date().toISOString(),
       origem,
       motivo,
+      usuario: user?.username,
     }
     setLogs(prev => {
       const updated = [nova, ...prev].slice(0, 5000)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
       return updated
     })
-  }, [])
+  }, [user?.username])
 
   const getLogsPorItem = useCallback((itemId: string) => {
     return logs.filter(l => l.itemId === itemId)

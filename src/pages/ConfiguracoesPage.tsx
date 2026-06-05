@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useStock } from '../context/StockContext'
 import { useConfig } from '../context/ConfigContext'
 import { CategoriaSlug, LimitesItem, ItemEstoque } from '../types'
 import { carregarDadosExemplo } from '../utils/seed'
+import { exportarBackup, importarBackup, downloadBackup } from '../services/backup'
+import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 type FiltroCategoria = CategoriaSlug | 'todas';
 
@@ -102,9 +106,42 @@ function LinhaItem({
 export default function ConfiguracoesPage() {
   const { getLimites, salvarLimite, resetarLimite, salvarLimitesMultiplos } = useConfig();
   const { data: stockData, version: stockVersion } = useStock();
+  const { user } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [itens, setItens] = useState<ItemFormState[]>([]);
   const [filtro, setFiltro] = useState<FiltroCategoria>('todas');
   const [salvo, setSalvo] = useState(false);
+
+  function handleExportar() {
+    const res = exportarBackup(user?.username);
+    if (res.ok && res.json && res.filename) {
+      downloadBackup(res.json, res.filename);
+      toast.sucesso('Backup gerado!', `${res.keysIncluded} chaves exportadas (${(res.size ?? 0 / 1024).toFixed(1)} KB)`);
+    } else {
+      toast.erro('Falha ao gerar backup', res.error);
+    }
+  }
+
+  async function handleImportar(file: File) {
+    const ok = await confirm({
+      title: 'Restaurar backup?',
+      message: `Isto vai SOBRESCREVER todos os dados atuais com o conteúdo de "${file.name}". Deseja continuar?`,
+      confirmText: 'Restaurar',
+      variant: 'danger',
+      icon: '⚠️',
+    });
+    if (!ok) return;
+    const text = await file.text();
+    const res = importarBackup(text);
+    if (res.ok) {
+      toast.sucesso('Backup restaurado!', `${res.keysImported} chaves importadas. Recarregando…`);
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      toast.erro('Falha ao restaurar', res.error);
+    }
+  }
 
   useEffect(() => {
     const todos = [...(stockData.acai || []), ...(stockData.sorvetes || []), ...(stockData.materias_primas || []), ...(stockData.personalizados || [])];
@@ -253,6 +290,40 @@ export default function ConfiguracoesPage() {
           className="px-4 py-2.5 text-sm font-bold text-white bg-amber-600 rounded-xl hover:bg-amber-700 active:bg-amber-800 transition-colors">
           🔄 Carregar Dados de Exemplo
         </button>
+      </div>
+
+      <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">💾 Backup & Restore</h3>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+          Exporte todos os dados (estoque, vendas, preços, despesas, lotes, usuários, etc.) em um arquivo JSON.
+          Guarde em local seguro — pode restaurar depois ou migrar para outro navegador.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={handleExportar}
+            className="px-4 py-2.5 text-sm font-bold text-white bg-slate-700 dark:bg-slate-600 rounded-xl hover:bg-slate-800 active:bg-slate-900 transition-colors"
+            aria-label="Baixar arquivo de backup">
+            ⬇️ Baixar backup
+          </button>
+          <button onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 active:bg-slate-200 transition-colors"
+            aria-label="Selecionar arquivo de backup para restaurar">
+            ⬆️ Restaurar de arquivo…
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleImportar(f)
+              e.target.value = ''
+            }}
+          />
+        </div>
+        <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-3">
+          ⚠️ Restaurar <strong>sobrescreve</strong> todos os dados atuais. Faça um backup antes se quiser manter o estado atual.
+        </p>
       </div>
     </div>
   )

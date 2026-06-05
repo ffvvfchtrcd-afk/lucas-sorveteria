@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react'
 import { useStock } from '../context/StockContext'
 import { useValidade } from '../context/ValidadeContext'
 import { useLog } from '../context/LogContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 export default function ValidadesPage() {
   const { todosItens, definirQuantidade } = useStock()
   const { lotes, adicionarLote, consumirLote, removerLote, getLotesVencidos, getLotesProximosVencer } = useValidade()
   const { addLog } = useLog()
+  const confirm = useConfirm()
 
   const [mostrarForm, setMostrarForm] = useState(false)
   const [novoItem, setNovoItem] = useState('')
@@ -163,8 +165,8 @@ export default function ValidadesPage() {
                     <td className="px-4 py-3 text-xs text-gray-400">{new Date(lote.dataEntrada).toLocaleDateString('pt-BR')}</td>
                     <td className="px-4 py-3 text-xs text-gray-400 max-w-[180px] truncate" title={lote.observacao || ''}>{lote.observacao || '—'}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => {
-                        if (window.confirm(`Descartar lote de "${lote.itemNome}" (${lote.quantidade} ${getUnidade(lote.itemId)})? Isso dá baixa no estoque.`))
+                      <button onClick={async () => {
+                        if (await confirm({ title: 'Descartar lote?', message: `Descartar lote de "${lote.itemNome}" (${lote.quantidade} ${getUnidade(lote.itemId)})? Isso dá baixa no estoque.`, confirmText: 'Descartar', variant: 'danger', icon: '🗑️' }))
                           handleRemoverLote(lote.id, lote.itemId, lote.itemNome, lote.quantidade)
                       }}
                         className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-950/40 rounded-md hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors">Descartar</button>

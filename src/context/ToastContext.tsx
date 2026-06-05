@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 
 export type ToastTipo = 'sucesso' | 'erro' | 'info' | 'alerta'
 
@@ -45,6 +45,16 @@ const CORES_TEXTO: Record<ToastTipo, string> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setPrefersReducedMotion(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const remover = useCallback((id: string) => {
     setToasts(t => t.filter(x => x.id !== id))
@@ -68,7 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start gap-2.5 p-3 rounded-lg border-l-4 ${CORES[t.tipo]} ${CORES_TEXTO[t.tipo]} shadow-lg animate-slideInRight`}
+            className={`pointer-events-auto flex items-start gap-2.5 p-3 rounded-lg border-l-4 ${CORES[t.tipo]} ${CORES_TEXTO[t.tipo]} shadow-lg ${prefersReducedMotion ? '' : 'animate-slideInRight'}`}
             role="alert"
           >
             <span className="text-lg shrink-0 mt-0.5">{ICONES[t.tipo]}</span>

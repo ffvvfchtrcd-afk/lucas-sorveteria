@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useStock } from '../context/StockContext'
@@ -9,7 +9,7 @@ import { useGastos } from '../context/GastosContext'
 import { useReceita } from '../context/ReceitaContext'
 import { chatCompletionWithRetry, Message, ToolCall, ToolDefinition } from '../services/openrouter'
 import { db } from '../services/database'
-import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES, DESPESA_TIPOS, DespesaTipo, Despesa, TipoMovimentacao, Receita } from '../types'
+import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES, DESPESA_TIPOS, DespesaTipo, Despesa, TipoMovimentacao, Receita, LogMovimentacao } from '../types'
 
 const API_KEY_STORAGE = 'openrouter_key';
 
@@ -257,7 +257,7 @@ function executarTool(
   adicionarItemPersonalizado?: (item: CustomItemInput) => void,
   editarItemPersonalizado?: (itemId: string, updates: Partial<CustomItemInput>) => void,
   removerItemPersonalizado?: (itemId: string) => void,
-  logs?: { tipo: string; quantidade: number; data: string; itemId: string }[],
+  logs?: { tipo: TipoMovimentacao; quantidade: number; data: string; itemId: string; motivo?: string; itemNome?: string; usuario?: string; origem?: string }[],
   precos?: { itemId: string; precoCusto: number; precoVenda: number }[],
   setPreco?: (itemId: string, itemNome: string, precoCusto: number, precoVenda: number) => void,
   adicionarDespesa?: (tipo: DespesaTipo, valor: number, descricao: string, data: string, observacao?: string) => void,
@@ -651,7 +651,7 @@ function executarTool(
         a.qtd += Math.abs(p.quantidade)
         const preco = (precos || []).find((pp: any) => pp.itemId === p.itemId)
         a.valor += (preco?.precoCusto || 0) * Math.abs(p.quantidade)
-        const motivo = ((p as any).motivo || 'outro').split(':')[0].trim()
+        const motivo = (p.motivo || 'outro').split(':')[0].trim()
         a.motivos[motivo] = (a.motivos[motivo] || 0) + 1
       }
       const topPerdas = Array.from(perdasAgrup.entries())
@@ -833,6 +833,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const proativoFeito = useRef(false)
 
+  const tools = useMemo(() => buildTools(todosItens), [todosItens])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -844,7 +846,6 @@ export default function ChatPage() {
 
     const timeout = setTimeout(async () => {
       const systemContent = gerarSistema(data, getLimites, logs, precos, despesas, receitas, db.lotes.listar())
-      const tools = buildTools(todosItens)
       const history: Message[] = [
         { role: 'system', content: systemContent + '\n\nFaça uma saudação proativa! Analise TUDO do negócio (estoque + finanças + validades + receitas + top produtos + perdas) e dê um RESUMO COMPLETO organizado em seções. Seja educado, direto e destaque os pontos críticos que precisam de ação imediata. Lembre ao usuário que ele pode perguntar "como fazer" qualquer coisa que você explica o passo a passo.' },
       ]
@@ -879,7 +880,6 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMsg])
 
     const systemContent = gerarSistema(data, getLimites, logs, precos, despesas, receitas, db.lotes.listar())
-    const tools = buildTools(todosItens)
 
     const history: Message[] = [
       { role: 'system', content: systemContent },
@@ -933,7 +933,6 @@ export default function ChatPage() {
     if (loading || !apiKey) return
     setLoading(true)
     const systemContent = gerarSistema(data, getLimites, logs, precos, despesas, receitas, db.lotes.listar())
-    const tools = buildTools(todosItens)
     const history: Message[] = [
       { role: 'system', content: systemContent + '\n\nO usuário clicou no botão "Resumir tudo". Use a ferramenta resumo_completo para puxar TUDO e formate um panorama executivo do negócio com Markdown bonito, emojis de status, e destaque os pontos críticos que precisam de ação imediata. Organize em seções: 📦 Estoque, 💰 Financeiro, 💸 Despesas por tipo, 🏆 Top produtos, 🗑️ Top perdas, 📅 Validades, 📋 Receitas, 📝 Últimas movimentações. Termine com 2-3 sugestões de ação prioritária.' },
       { role: 'user', content: 'Me dê um resumo completo de TUDO do negócio agora.' },
