@@ -25,11 +25,15 @@ function gerarSistema(
   getLimites: (id: string, d: { minimo: number }) => LimitesItem,
   logs: { tipo: string; quantidade: number; data: string; itemId: string }[],
   precos: { itemId: string; precoCusto: number; precoVenda: number }[],
-  despesas: { tipo: string; valor: number; descricao: string; data: string }[]
+  despesas: { tipo: string; valor: number; descricao: string; data: string }[],
+  receitas: { produtoId: string; nome: string; itens: { itemId: string; quantidade: number }[]; rendimento: number }[] = [],
+  lotes: { itemId: string; itemNome: string; quantidade: number; dataValidade: string }[] = []
 ): string {
   const todos = [...data.acai, ...data.sorvetes, ...data.materias_primas]
   const agora = new Date().toISOString().slice(0, 10)
   const mesAtual = agora.slice(0, 7)
+  const hoje = new Date()
+  const em15Dias = new Date(hoje.getTime() + 15 * 86400000)
 
   const criticos = todos.filter(i => {
     const lim = getLimites(i.id, { minimo: i.quantidadeMinima })
@@ -53,14 +57,39 @@ function gerarSistema(
     const p = precos.find(p => p.itemId === v.itemId)
     return s + (p?.precoVenda || 0) * v.quantidade
   }, 0)
+  const custoMes = vendasMes.reduce((s, v) => {
+    const p = precos.find(p => p.itemId === v.itemId)
+    return s + (p?.precoCusto || 0) * v.quantidade
+  }, 0)
+  const lucroMes = receitaMes - custoMes
   const despesasMes = despesas.filter(d => d.data.startsWith(mesAtual)).reduce((s, d) => s + d.valor, 0)
+
+  const vendasAgrup: Record<string, number> = {}
+  for (const v of vendasMes) vendasAgrup[v.itemId] = (vendasAgrup[v.itemId] || 0) + v.quantidade
+  const topProdutos = Object.entries(vendasAgrup).sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([id, qtd]) => {
+      const item = todos.find(i => i.id === id)
+      return `- ${item?.nome || id}: ${qtd} ${item?.unidade || 'un'}`
+    }).join('\n') || '- Nenhuma venda registrada ainda'
+
+  const lotesVencidos = lotes.filter(l => new Date(l.dataValidade) < hoje)
+  const lotesAVencer = lotes.filter(l => {
+    const val = new Date(l.dataValidade)
+    return val >= hoje && val <= em15Dias
+  })
+
+  const totalReceitas = receitas.length
+  const produtosComReceita = receitas.map(r => {
+    const p = todos.find(t => t.id === r.produtoId)
+    return p?.nome || r.produtoId
+  }).join(', ') || 'nenhuma'
 
   return `Você é um assistente especializado em gestão de estoque e finanças de uma sorveteria/açaíteria.
 Você também ENSINA o usuário a usar o sistema quando ele perguntar "como fazer X".
 
 Data de hoje: ${agora}
 
-## INVENTÁRIO ATUAL:
+## INVENTÁRIO ATUAL (${todos.length} itens):
 ${inventario}
 
 ## RESUMO RÁPIDO
@@ -68,10 +97,23 @@ ${inventario}
 - ${baixos.length} itens com estoque BAIXO 🟡
 - ${todos.length - criticos.length - baixos.length} itens OK 🟢
 
+## TOP 3 VENDAS DO MÊS (${mesAtual})
+${topProdutos}
+
 ## RESUMO FINANCEIRO DO MÊS (${mesAtual})
-- Receita (vendas): R$ ${receitaMes.toFixed(2)}
-- Despesas (contas, aluguel, etc): R$ ${despesasMes.toFixed(2)}
+- 💰 Receita (vendas): R$ ${receitaMes.toFixed(2)}
+- 💵 Custo (CMV): R$ ${custoMes.toFixed(2)}
+- 📈 Lucro bruto: R$ ${lucroMes.toFixed(2)}
+- 💸 Despesas (contas, aluguel, etc): R$ ${despesasMes.toFixed(2)}
+- 💎 Lucro líquido: R$ ${(lucroMes - despesasMes).toFixed(2)}
 - ${despesas.length} despesas registradas no total
+
+## VALIDADES
+- 🔴 ${lotesVencidos.length} lotes vencidos (precisam ser descartados)
+- 🟡 ${lotesAVencer.length} lotes a vencer em 15 dias
+
+## FICHAS TÉCNICAS (RECEITAS)
+- ${totalReceitas} produtos com receita cadastrada: ${produtosComReceita}
 
 ## SEJA PROATIVO
 - Se o usuário abrir o chat sem mensagem, faça uma saudação e já sugira ações com base no estado do estoque e finanças
@@ -108,7 +150,8 @@ Você TEM acesso a funções para consultar TUDO — estoque, finanças, validad
 - despesas_por_tipo — gastos agrupados por categoria
 - registrar_despesa — REGISTRA novo gasto (auto-categoriza pela descrição)
 - resumo_despesas_mensal — relatório completo do mês com % de cada tipo
-- estatisticas_gerais — resumo completo do negócio
+- **estatisticas_gerais** — resumo rápido do negócio
+- **resumo_completo** — RESUMO GERAL DE TUDO em uma única chamada. Traz: estoque (status), top críticos/baixos, financeiro do mês (receita/custo/lucro bruto/líquido + margens), despesas por tipo, top 5 produtos vendidos, top 5 perdas, validades (vencidos + a vencer), receitas cadastradas, últimas movimentações. USE esta função quando o usuário pedir "resumo do negócio", "como está o mês", "me dê um panorama", "como está tudo", "resumo geral" ou similar.
 
 ### 📅 Validades
 - lotes_vencidos — o que já venceu
@@ -198,6 +241,8 @@ function buildTools(todos: ItemEstoque[]): ToolDefinition[] {
 
     // ─── ESTATÍSTICAS ───
     { type: 'function', function: { name: 'estatisticas_gerais', description: 'Retorna estatísticas completas do negócio: receita do mês, despesas, lucro, total vendas, lotes vencidos', parameters: { type: 'object', properties: {} } } },
+    // ─── RESUMO COMPLETO (tudo de uma vez) ───
+    { type: 'function', function: { name: 'resumo_completo', description: 'Retorna um RESUMO COMPLETO de TUDO do negócio em uma única chamada: estoque (todos os itens com status), alertas críticos/baixos, resumo financeiro do mês (receita/custo/lucro bruto/líquido), despesas por tipo, top 5 produtos mais vendidos, top 5 perdas, validades (vencidos + a vencer), receitas cadastradas e movimentações recentes. Use quando o usuário pedir um resumo geral do negócio.', parameters: { type: 'object', properties: {} } } },
   ]
 }
 
@@ -541,6 +586,137 @@ function executarTool(
       })
     }
 
+    case 'resumo_completo': {
+      const mesAtual = new Date().toISOString().slice(0, 7)
+      const hoje = new Date()
+      const em15Dias = new Date(hoje.getTime() + 15 * 86400000)
+
+      // 1. Estoque com status
+      const estoque = todosItens.map(i => {
+        const lim = getLimites(i.id, { minimo: i.quantidadeMinima })
+        const status = i.quantidadeAtual <= lim.critico ? 'critico' : i.quantidadeAtual <= lim.minimo ? 'baixo' : 'ok'
+        return { id: i.id, nome: i.nome, categoria: i.categoria, atual: i.quantidadeAtual, unidade: i.unidade, minimo: lim.minimo, critico: lim.critico, status }
+      })
+      const criticos = estoque.filter(e => e.status === 'critico')
+      const baixos = estoque.filter(e => e.status === 'baixo')
+
+      // 2. Financeiro do mês
+      const vendasMes = (logs || []).filter((l: any) => l.tipo === 'venda' && (l.data || '').startsWith(mesAtual))
+      const receitaMes = vendasMes.reduce((s: number, v: any) => {
+        const p = (precos || []).find((p: any) => p.itemId === v.itemId)
+        return s + (p?.precoVenda || 0) * v.quantidade
+      }, 0)
+      const custoMes = vendasMes.reduce((s: number, v: any) => {
+        const p = (precos || []).find((p: any) => p.itemId === v.itemId)
+        return s + (p?.precoCusto || 0) * v.quantidade
+      }, 0)
+
+      // 3. Despesas do mês por tipo
+      const despsMes = (despesas || []).filter((d: any) => d.data.startsWith(mesAtual))
+      const despesasMes = despsMes.reduce((s: number, d: any) => s + d.valor, 0)
+      const porTipo = new Map<string, number>()
+      for (const d of despsMes) porTipo.set(d.tipo, (porTipo.get(d.tipo) || 0) + d.valor)
+      const despesasPorTipo = Array.from(porTipo.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([tipo, val]) => ({ tipo, valor: val, percentual: despesasMes > 0 ? `${((val / despesasMes) * 100).toFixed(0)}%` : '0%' }))
+
+      // 4. Top 5 produtos vendidos
+      const vendasAgrup = new Map<string, { qtd: number; receita: number; custo: number; lucro: number }>()
+      for (const v of vendasMes) {
+        const p = (precos || []).find((p: any) => p.itemId === v.itemId)
+        const item = todosItens.find(i => i.id === v.itemId)
+        if (!vendasAgrup.has(v.itemId)) vendasAgrup.set(v.itemId, { qtd: 0, receita: 0, custo: 0, lucro: 0 })
+        const a = vendasAgrup.get(v.itemId)!
+        const receita = (p?.precoVenda || 0) * v.quantidade
+        const custo = (p?.precoCusto || 0) * v.quantidade
+        a.qtd += v.quantidade
+        a.receita += receita
+        a.custo += custo
+        a.lucro += receita - custo
+      }
+      const topProdutos = Array.from(vendasAgrup.entries())
+        .map(([id, v]) => {
+          const item = todosItens.find(i => i.id === id)
+          return { id, nome: item?.nome || id, unidade: item?.unidade || 'un', ...v }
+        })
+        .sort((a, b) => b.receita - a.receita)
+        .slice(0, 5)
+
+      // 5. Top 5 perdas
+      const perdas = (logs || []).filter((l: any) => l.tipo === 'perda' && (l.data || '').startsWith(mesAtual))
+      const perdasAgrup = new Map<string, { qtd: number; valor: number; motivos: Record<string, number> }>()
+      for (const p of perdas) {
+        if (!perdasAgrup.has(p.itemId)) perdasAgrup.set(p.itemId, { qtd: 0, valor: 0, motivos: {} })
+        const a = perdasAgrup.get(p.itemId)!
+        a.qtd += Math.abs(p.quantidade)
+        const preco = (precos || []).find((pp: any) => pp.itemId === p.itemId)
+        a.valor += (preco?.precoCusto || 0) * Math.abs(p.quantidade)
+        const motivo = ((p as any).motivo || 'outro').split(':')[0].trim()
+        a.motivos[motivo] = (a.motivos[motivo] || 0) + 1
+      }
+      const topPerdas = Array.from(perdasAgrup.entries())
+        .map(([id, v]) => {
+          const item = todosItens.find(i => i.id === id)
+          return { id, nome: item?.nome || id, unidade: item?.unidade || 'un', ...v }
+        })
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 5)
+
+      // 6. Validades
+      const todosLotes = db.lotes.listar()
+      const lotesVencidos = todosLotes.filter((l: any) => new Date(l.dataValidade) < hoje)
+      const lotesAVencer = todosLotes.filter((l: any) => {
+        const val = new Date(l.dataValidade)
+        return val >= hoje && val <= em15Dias
+      })
+
+      // 7. Receitas cadastradas
+      const receitasLista = (receitas || []).map(r => {
+        const produto = todosItens.find(i => i.id === r.produtoId)
+        const custo = r.itens.reduce((s: number, it: any) => s + ((precos || []).find(p => p.itemId === it.itemId)?.precoCusto || 0) * it.quantidade, 0)
+        const custoUnit = r.rendimento > 0 ? custo / r.rendimento : custo
+        return { receita: r.nome, produto: produto?.nome || r.produtoId, ingredientes_count: r.itens.length, custo_unitario: custoUnit }
+      })
+
+      // 8. Movimentações recentes (últimas 10)
+      const movsRecentes = db.logs.listar().slice(0, 10).map((l: any) => ({
+        tipo: l.tipo, item: l.itemNome, quantidade: l.quantidade, data: l.data, motivo: l.motivo
+      }))
+
+      return JSON.stringify({
+        gerado_em: new Date().toISOString(),
+        periodo: mesAtual,
+        estoque: {
+          total_itens: estoque.length,
+          criticos: criticos.length,
+          baixos: baixos.length,
+          ok: estoque.length - criticos.length - baixos.length,
+          itens_criticos: criticos.map(c => ({ nome: c.nome, atual: c.atual, unidade: c.unidade, minimo: c.minimo })),
+          itens_baixos: baixos.map(b => ({ nome: b.nome, atual: b.atual, unidade: b.unidade, minimo: b.minimo })),
+        },
+        financeiro_mes: {
+          receita: receitaMes,
+          custo: custoMes,
+          lucro_bruto: receitaMes - custoMes,
+          despesas: despesasMes,
+          lucro_liquido: receitaMes - custoMes - despesasMes,
+          margem_bruta: receitaMes > 0 ? `${(((receitaMes - custoMes) / receitaMes) * 100).toFixed(0)}%` : '0%',
+          margem_liquida: receitaMes > 0 ? `${(((receitaMes - custoMes - despesasMes) / receitaMes) * 100).toFixed(0)}%` : '0%',
+        },
+        despesas_por_tipo: despesasPorTipo,
+        top_produtos: topProdutos,
+        top_perdas: topPerdas,
+        validades: {
+          vencidos: lotesVencidos.length,
+          a_vencer_15d: lotesAVencer.length,
+          detalhes_vencidos: lotesVencidos.slice(0, 10).map((l: any) => ({ item: l.itemNome, quantidade: l.quantidade, validade: l.dataValidade })),
+          detalhes_a_vencer: lotesAVencer.slice(0, 10).map((l: any) => ({ item: l.itemNome, quantidade: l.quantidade, validade: l.dataValidade })),
+        },
+        receitas: receitasLista,
+        movimentacoes_recentes: movsRecentes,
+      })
+    }
+
     case 'registrar_despesa': {
       const valor = Number(args.valor)
       if (!args.descricao || isNaN(valor) || valor <= 0) return JSON.stringify({ erro: 'Descrição e valor positivo são obrigatórios' })
@@ -667,10 +843,10 @@ export default function ChatPage() {
     proativoFeito.current = true
 
     const timeout = setTimeout(async () => {
-      const systemContent = gerarSistema(data, getLimites, logs, precos, despesas)
+      const systemContent = gerarSistema(data, getLimites, logs, precos, despesas, receitas, db.lotes.listar())
       const tools = buildTools(todosItens)
       const history: Message[] = [
-        { role: 'system', content: systemContent + '\n\nFaça uma saudação proativa! Analise o estoque e as finanças e sugira ações com base no estado atual. Seja educado e direto. Lembre ao usuário que ele pode perguntar "como fazer" qualquer coisa que você explica o passo a passo.' },
+        { role: 'system', content: systemContent + '\n\nFaça uma saudação proativa! Analise TUDO do negócio (estoque + finanças + validades + receitas + top produtos + perdas) e dê um RESUMO COMPLETO organizado em seções. Seja educado, direto e destaque os pontos críticos que precisam de ação imediata. Lembre ao usuário que ele pode perguntar "como fazer" qualquer coisa que você explica o passo a passo.' },
       ]
 
       try {
@@ -702,7 +878,7 @@ export default function ChatPage() {
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() }
     setMessages(prev => [...prev, userMsg])
 
-    const systemContent = gerarSistema(data, getLimites, logs, precos, despesas)
+    const systemContent = gerarSistema(data, getLimites, logs, precos, despesas, receitas, db.lotes.listar())
     const tools = buildTools(todosItens)
 
     const history: Message[] = [
@@ -753,10 +929,43 @@ export default function ChatPage() {
     setConversation([])
   }
 
+  async function resumoRapido() {
+    if (loading || !apiKey) return
+    setLoading(true)
+    const systemContent = gerarSistema(data, getLimites, logs, precos, despesas, receitas, db.lotes.listar())
+    const tools = buildTools(todosItens)
+    const history: Message[] = [
+      { role: 'system', content: systemContent + '\n\nO usuário clicou no botão "Resumir tudo". Use a ferramenta resumo_completo para puxar TUDO e formate um panorama executivo do negócio com Markdown bonito, emojis de status, e destaque os pontos críticos que precisam de ação imediata. Organize em seções: 📦 Estoque, 💰 Financeiro, 💸 Despesas por tipo, 🏆 Top produtos, 🗑️ Top perdas, 📅 Validades, 📋 Receitas, 📝 Últimas movimentações. Termine com 2-3 sugestões de ação prioritária.' },
+      { role: 'user', content: 'Me dê um resumo completo de TUDO do negócio agora.' },
+    ]
+    try {
+      let result = await chatCompletionWithRetry({ messages: history, tools, apiKey })
+      while (result.toolCalls.length > 0) {
+        history.push(result.message)
+        for (const tc of result.toolCalls) {
+          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado, logs, precos, setPreco, adicionarDespesa, despesas, receitas, salvarReceita, removerReceita)
+          history.push({ role: 'tool', content: toolResult, tool_call_id: tc.id })
+        }
+        result = await chatCompletionWithRetry({ messages: history, tools, apiKey })
+      }
+      const aiContent = result.message.content || 'Pronto!'
+      const aiMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: aiContent, timestamp: new Date() }
+      setMessages(prev => [...prev, aiMsg])
+      setConversation([{ role: 'user', content: 'Me dê um resumo completo de TUDO do negócio agora.' }, { role: 'assistant', content: aiContent }])
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido'
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: `❌ Erro: ${errorMsg}`, timestamp: new Date() }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const sugestoes = [
+    'Me dê um resumo completo do negócio',
     'O que está em falta no estoque?',
     'Mostre tudo que preciso comprar',
     'Quais itens estão críticos?',
+    'Quanto lucrei este mês?',
   ]
 
   if (!apiKey) {
@@ -794,14 +1003,20 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-6rem)]">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">🤖 Assistente IA</h1>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Pergunte sobre o estoque, registre entradas e saídas</p>
         </div>
-        <button onClick={limparChat} className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          Limpar Chat
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={resumoRapido} disabled={loading}
+            className="px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 transition-all shadow-sm flex items-center gap-1.5">
+            <span>📊</span><span>Resumir tudo</span>
+          </button>
+          <button onClick={limparChat} className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Limpar Chat
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-black/20 flex flex-col overflow-hidden">
