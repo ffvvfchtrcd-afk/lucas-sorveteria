@@ -5,6 +5,7 @@ import { StockProvider } from './context/StockContext'
 import { ConfigProvider } from './context/ConfigContext'
 import { LogProvider } from './context/LogContext'
 import { PrecoProvider } from './context/PrecoContext'
+import { ReceitaProvider } from './context/ReceitaContext'
 import { ValidadeProvider } from './context/ValidadeContext'
 import { GastosProvider } from './context/GastosContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -60,6 +61,7 @@ export default function App() {
     <AuthProvider>
     <StockProvider>
     <PrecoProvider>
+    <ReceitaProvider>
     <LogProvider>
       <ValidadeProvider>
       <GastosProvider>
@@ -111,6 +113,7 @@ export default function App() {
       </GastosProvider>
     </ValidadeProvider>
     </LogProvider>
+    </ReceitaProvider>
     </PrecoProvider>
     </StockProvider>
     </AuthProvider>

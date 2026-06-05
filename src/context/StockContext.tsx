@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput, CATEGORIAS_BASE, UnidadeMedida, TipoItem } from '../types'
+import { ItemEstoque, EstoqueData, LimitesItem, CustomItemInput, CATEGORIAS_BASE, UnidadeMedida, TipoItem, GestaoItem, gestaoFromTipo, GESTAO_PADRAO } from '../types'
 import { carregarDados as carregarDadosBase } from '../utils/estoque'
 
 const OVERRIDES_KEY = 'estoque_quantidades'
@@ -25,7 +25,8 @@ interface StockContextType {
   adicionarItemPersonalizado: (item: CustomItemInput) => void
   removerItemPersonalizado: (itemId: string) => void
   editarItemPersonalizado: (itemId: string, updates: Partial<CustomItemInput>) => void
-  editarItem: (itemId: string, updates: Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem }>) => void
+  editarItem: (itemId: string, updates: Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem; gestao: GestaoItem }>) => void
+  getGestao: (itemId: string) => GestaoItem
 }
 
 const StockContext = createContext<StockContextType | null>(null)
@@ -46,7 +47,7 @@ function getCustomItems(): CustomItemInput[] {
 
 const CATEGORIAS_CONHECIDAS = CATEGORIAS_BASE.map(c => c.slug)
 
-function getItemProps(): Record<string, Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem }>> {
+function getItemProps(): Record<string, Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem; gestao: GestaoItem }>> {
   try {
     return JSON.parse(localStorage.getItem(ITEM_PROPS_KEY) || '{}')
   } catch { return {} }
@@ -55,7 +56,9 @@ function getItemProps(): Record<string, Partial<{ nome: string; unidade: Unidade
 function applyProps(item: ItemEstoque, props: Record<string, any>): ItemEstoque {
   const p = props[item.id]
   if (!p) return item
-  return { ...item, ...p }
+  const merged: ItemEstoque = { ...item, ...p }
+  merged.gestao = p.gestao || gestaoFromTipo(merged.tipo)
+  return merged
 }
 
 function mergeData(overrides: StockOverride): EstoqueData {
@@ -79,6 +82,7 @@ function mergeData(overrides: StockOverride): EstoqueData {
     const ovr = overrides[c.id]
     const atual = ovr ? ovr.quantidadeAtual : c.quantidadeAtual
     const ultima = ovr ? ovr.ultimaAtualizacao : new Date().toISOString().slice(0, 10)
+    const tipo = c.tipo || 'ambos'
     const item: ItemEstoque = {
       id: c.id,
       nome: c.nome,
@@ -88,7 +92,8 @@ function mergeData(overrides: StockOverride): EstoqueData {
       unidade: c.unidade,
       alerta: 'ok',
       ultimaAtualizacao: ultima,
-      tipo: c.tipo || 'ambos',
+      tipo,
+      gestao: c.gestao || gestaoFromTipo(tipo),
     }
     const withProps = applyProps(item, itemProps)
     const catList = CATEGORIAS_CONHECIDAS.includes(c.categoria)
@@ -98,6 +103,15 @@ function mergeData(overrides: StockOverride): EstoqueData {
     if (!catList.find(ex => ex.id === c.id)) {
       catList.push(withProps)
     }
+  }
+
+  for (const cat of ['acai', 'sorvetes', 'materias_primas'] as const) {
+    for (const item of merged[cat]) {
+      if (!item.gestao) item.gestao = gestaoFromTipo(item.tipo)
+    }
+  }
+  for (const item of merged.personalizados) {
+    if (!item.gestao) item.gestao = gestaoFromTipo(item.tipo)
   }
 
   return merged
@@ -198,25 +212,38 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setVersion(v => v + 1)
   }, [])
 
-  const editarItem = useCallback((itemId: string, updates: Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem }>) => {
+  const editarItem = useCallback((itemId: string, updates: Partial<{ nome: string; unidade: UnidadeMedida; tipo: TipoItem; gestao: GestaoItem }>) => {
     const customItem = customItems.find(c => c.id === itemId)
     if (customItem) {
-      editarItemPersonalizado(itemId, updates)
+      const next: any = { ...updates }
+      if (updates.gestao) next.gestao = updates.gestao
+      else if (updates.tipo && !customItem.gestao) next.gestao = gestaoFromTipo(updates.tipo)
+      editarItemPersonalizado(itemId, next)
     } else {
       try {
         const saved = JSON.parse(localStorage.getItem(ITEM_PROPS_KEY) || '{}')
-        saved[itemId] = { ...(saved[itemId] || {}), ...updates }
+        const merged = { ...(saved[itemId] || {}), ...updates }
+        if (updates.gestao) merged.gestao = updates.gestao
+        else if (updates.tipo && !merged.gestao) merged.gestao = gestaoFromTipo(updates.tipo)
+        saved[itemId] = merged
         localStorage.setItem(ITEM_PROPS_KEY, JSON.stringify(saved))
         setVersion(v => v + 1)
       } catch { /* ignore */ }
     }
   }, [customItems, editarItemPersonalizado])
 
+  const getGestao = useCallback((itemId: string): GestaoItem => {
+    const item = todosItens.find(i => i.id === itemId)
+    if (!item) return { ...GESTAO_PADRAO }
+    return item.gestao || gestaoFromTipo(item.tipo)
+  }, [todosItens])
+
   return (
     <StockContext.Provider value={{
       data, version, adicionarQuantidade, definirQuantidade, getLimites,
       buscarItemPorNome, todosItens, customItems,
-      adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado, editarItem
+      adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado, editarItem,
+      getGestao
     }}>
       {children}
     </StockContext.Provider>

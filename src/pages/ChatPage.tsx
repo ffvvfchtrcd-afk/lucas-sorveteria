@@ -6,9 +6,10 @@ import { useLog } from '../context/LogContext'
 import { usePreco } from '../context/PrecoContext'
 import { useValidade } from '../context/ValidadeContext'
 import { useGastos } from '../context/GastosContext'
+import { useReceita } from '../context/ReceitaContext'
 import { chatCompletionWithRetry, Message, ToolCall, ToolDefinition } from '../services/openrouter'
 import { db } from '../services/database'
-import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES, DESPESA_TIPOS, DespesaTipo, Despesa, TipoMovimentacao } from '../types'
+import { ItemEstoque, LimitesItem, EstoqueData, CustomItemInput, UnidadeMedida, UNIDADES, DESPESA_TIPOS, DespesaTipo, Despesa, TipoMovimentacao, Receita } from '../types'
 
 const API_KEY_STORAGE = 'openrouter_key';
 
@@ -97,6 +98,9 @@ Você TEM acesso a funções para consultar TUDO — estoque, finanças, validad
 - criar_item / editar_item / remover_item — CRUD completo
 - resumo_para_compras — lista de compras
 - **definir_preco** — DEFINE preço de custo e/ou venda de um produto. PERSISTE no localStorage. Use quando pedirem "coloca o sorvete a R$25" / "custo 10, venda 20" / "atualiza o preço do morango". Se o usuário informar só um dos preços, mantenha o outro.
+- **listar_receitas** — Lista produtos com ficha técnica (receita) cadastrada, mostrando ingredientes e custo calculado
+- **criar_receita** — Cadastra ficha técnica de um produto. Soma os ingredientes para calcular o custo de produção automaticamente. Ex: "Sorvete Creme usa 200ml de leite + 100g de açúcar por 1 unidade"
+- **remover_receita** — Remove a ficha técnica (deixa de calcular custo pela receita)
 
 ### 💰 Finanças
 - resumo_financeiro — lucro, receita, despesas (com período)
@@ -172,6 +176,9 @@ function buildTools(todos: ItemEstoque[]): ToolDefinition[] {
     { type: 'function', function: { name: 'remover_item', description: 'REMOVE um produto permanentemente. SEMPRE confirme antes.', parameters: { type: 'object', properties: { item_id: { type: 'string' } }, required: ['item_id'] } } },
     { type: 'function', function: { name: 'resumo_para_compras', description: 'Gera lista de tudo que precisa ser comprado, separado por categoria', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'definir_preco', description: 'DEFINE o preço de custo e/ou preço de venda de um produto. Use quando o usuário pedir para definir, alterar ou atualizar o preço. Persiste no localStorage. Se o usuário não informar um dos preços, mantenha o valor atual.', parameters: { type: 'object', properties: { item_id: { type: 'string', description: `ID do item. IDs:\n${itensStr}` }, preco_custo: { type: 'number', description: 'Preço de CUSTO (quanto você paga). Se não informado, mantém o atual.' }, preco_venda: { type: 'number', description: 'Preço de VENDA (quanto o cliente paga). Se não informado, mantém o atual.' } }, required: ['item_id'] } } },
+    { type: 'function', function: { name: 'listar_receitas', description: 'Lista todos os produtos que têm ficha técnica (receita) cadastrada, com os ingredientes e custo calculado pela receita', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'criar_receita', description: 'CADASTRA uma ficha técnica (receita) para um produto. Os ingredientes serão somados para calcular o custo automaticamente. Use quando o usuário disser "a receita do sorvete X usa leite e açúcar" ou "cadastra a ficha técnica do Y". Sempre salve o custo no precoCusto após criar a receita.', parameters: { type: 'object', properties: { produto_id: { type: 'string', description: `ID do produto final. IDs:\n${itensStr}` }, nome: { type: 'string', description: 'Nome descritivo da receita (ex: Sorvete Creme - Receita padrão)' }, ingredientes: { type: 'array', items: { type: 'object', properties: { item_id: { type: 'string', description: 'ID da matéria-prima' }, quantidade: { type: 'number', description: 'Quantidade necessária' } }, required: ['item_id', 'quantidade'] }, description: 'Lista de ingredientes: [{item_id, quantidade}]' }, rendimento: { type: 'number', description: 'Quantas unidades do produto final esta receita rende (padrão 1)' } }, required: ['produto_id', 'ingredientes'] } } },
+    { type: 'function', function: { name: 'remover_receita', description: 'Remove a ficha técnica de um produto (deixa de calcular custo automaticamente)', parameters: { type: 'object', properties: { produto_id: { type: 'string', description: 'ID do produto cuja receita deve ser removida' } }, required: ['produto_id'] } } },
 
     // ─── FINANÇAS ───
     { type: 'function', function: { name: 'resumo_financeiro', description: 'Resumo financeiro completo: receita, custo, lucro bruto/líquido, despesas. Período opcional (YYYY-MM-DD).', parameters: { type: 'object', properties: { inicio: { type: 'string', description: 'Data início YYYY-MM-DD (opcional)' }, fim: { type: 'string', description: 'Data fim YYYY-MM-DD (opcional)' } } } } },
@@ -210,6 +217,9 @@ function executarTool(
   setPreco?: (itemId: string, itemNome: string, precoCusto: number, precoVenda: number) => void,
   adicionarDespesa?: (tipo: DespesaTipo, valor: number, descricao: string, data: string, observacao?: string) => void,
   despesas?: Despesa[],
+  receitas?: Receita[],
+  salvarReceita?: (d: Omit<Receita, 'id' | 'dataCriacao'> & { id?: string }) => Receita,
+  removerReceita?: (id: string) => void,
 ): string {
   const args = JSON.parse(toolCall.function.arguments)
 
@@ -399,6 +409,60 @@ function executarTool(
       })
     }
 
+    case 'listar_receitas': {
+      const lista = (receitas || []).map(r => {
+        const produto = todosItens.find(i => i.id === r.produtoId)
+        const custo = r.itens.reduce((s: number, it: any) => s + (precos?.find(p => p.itemId === it.itemId)?.precoCusto || 0) * it.quantidade, 0)
+        const custoUnit = r.rendimento > 0 ? custo / r.rendimento : custo
+        return { receita: r.nome, produto: produto?.nome || r.produtoId, ingredientes: r.itens.map(i => `${todosItens.find(t => t.id === i.itemId)?.nome || i.itemId} (${i.quantidade})`), rendimento: r.rendimento, custo_total: custo, custo_unitario: custoUnit }
+      })
+      return JSON.stringify(lista.length > 0 ? lista : { mensagem: 'Nenhuma receita cadastrada. Use criar_receita para adicionar.' })
+    }
+
+    case 'criar_receita': {
+      if (!salvarReceita) return JSON.stringify({ erro: 'Função de receita indisponível' })
+      const produtoId = args.produto_id
+      const produto = todosItens.find(i => i.id === produtoId)
+      if (!produto) return JSON.stringify({ erro: `Produto com ID "${produtoId}" não encontrado` })
+      if (!Array.isArray(args.ingredientes) || args.ingredientes.length === 0) {
+        return JSON.stringify({ erro: 'Forneça ao menos 1 ingrediente com item_id e quantidade' })
+      }
+      const ingredientes = args.ingredientes.map((ing: any) => {
+        const mp = todosItens.find(i => i.id === ing.item_id)
+        return {
+          itemId: ing.item_id,
+          itemNome: mp?.nome || ing.item_id,
+          quantidade: Number(ing.quantidade) || 0,
+          unidade: (mp?.unidade || 'un') as UnidadeMedida,
+        }
+      }).filter((i: any) => i.quantidade > 0)
+      if (ingredientes.length === 0) return JSON.stringify({ erro: 'Todos os ingredientes tinham quantidade inválida' })
+
+      const rendimento = Number(args.rendimento) || 1
+      const nome = args.nome?.trim() || `${produto.nome} - Receita`
+
+      const receitaSalva = salvarReceita({ nome, produtoId, itens: ingredientes, rendimento })
+      const custo = ingredientes.reduce((s: number, it: any) => s + (precos?.find(p => p.itemId === it.itemId)?.precoCusto || 0) * it.quantidade, 0)
+      const custoUnit = rendimento > 0 ? custo / rendimento : custo
+      const precoAtual = precos?.find(p => p.itemId === produtoId)
+      setPreco?.(produtoId, produto.nome, custoUnit, precoAtual?.precoVenda || 0)
+
+      return JSON.stringify({
+        sucesso: true,
+        mensagem: `✅ Receita cadastrada para "${produto.nome}"!\n📋 ${nome}\n🧪 ${ingredientes.length} ingredientes\n💵 Custo calculado: R$ ${custoUnit.toFixed(2)}/${produto.unidade} (salvo no preço de custo automaticamente)`,
+        receita: receitaSalva, custo_unitario: custoUnit,
+      })
+    }
+
+    case 'remover_receita': {
+      if (!removerReceita) return JSON.stringify({ erro: 'Função de remover receita indisponível' })
+      const produtoId = args.produto_id
+      const receita = (receitas || []).find(r => r.produtoId === produtoId)
+      if (!receita) return JSON.stringify({ erro: `Nenhuma receita encontrada para o produto "${produtoId}"` })
+      removerReceita(receita.id)
+      return JSON.stringify({ sucesso: true, mensagem: `✅ Receita de "${receita.nome}" removida.` })
+    }
+
     case 'resumo_financeiro': {
       const hoje = new Date()
       const inicio = args.inicio || `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`
@@ -583,6 +647,7 @@ export default function ChatPage() {
   const { addLog, logs } = useLog()
   const { precos, setPreco } = usePreco()
   const { despesas, adicionarDespesa } = useGastos()
+  const { receitas, salvarReceita, removerReceita, getReceitaByProduto } = useReceita()
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '')
   const [keyInput, setKeyInput] = useState(apiKey)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -655,7 +720,7 @@ export default function ChatPage() {
         history.push(result.message)
 
         for (const tc of result.toolCalls) {
-          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado, logs, precos, setPreco, adicionarDespesa, despesas)
+          const toolResult = executarTool(tc, adicionarQuantidade, definirQuantidade, getLimites, buscarItemPorNome, todosItens, addLog, adicionarItemPersonalizado, editarItemPersonalizado, removerItemPersonalizado, logs, precos, setPreco, adicionarDespesa, despesas, receitas, salvarReceita, removerReceita)
           history.push({ role: 'tool', content: toolResult, tool_call_id: tc.id })
         }
 

@@ -1,21 +1,27 @@
 import { useState, useMemo } from 'react'
 import { useStock } from '../context/StockContext'
 import { usePreco } from '../context/PrecoContext'
-import { CATEGORIAS_BASE } from '../types'
+import { useReceita } from '../context/ReceitaContext'
+import { CATEGORIAS_BASE, UnidadeMedida } from '../types'
+import ReceitaModal from '../components/ReceitaModal'
 
 export default function PrecosPage() {
   const { todosItens } = useStock()
   const { precos, setPreco, removerPreco } = usePreco()
+  const { getReceitaByProduto, calcularCusto, custoTotal } = useReceita()
 
   const [filtro, setFiltro] = useState<string>('todas')
   const [editando, setEditando] = useState<string | null>(null)
   const [editCusto, setEditCusto] = useState(0)
   const [editVenda, setEditVenda] = useState(0)
+  const [receitaItemId, setReceitaItemId] = useState<string | null>(null)
 
   const itens = useMemo(() => {
     const lista = filtro === 'todas' ? todosItens : todosItens.filter(i => i.categoria === filtro)
     return lista.sort((a, b) => a.nome.localeCompare(b.nome))
   }, [todosItens, filtro])
+
+  const custoUnitario = (itemId: string) => precos.find(p => p.itemId === itemId)?.precoCusto || 0
 
   function iniciarEdicao(itemId: string) {
     const p = precos.find(p => p.itemId === itemId)
@@ -40,8 +46,7 @@ export default function PrecosPage() {
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">💰 Preços</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
           Defina o <strong>preço de custo</strong> (quanto você paga) e o <strong>preço de venda</strong> (quanto o cliente paga) de cada produto.
-          É aqui que o sistema calcula a margem de lucro. ⚠️ <strong>Sem preços cadastrados, o PDV não consegue vender e o Financeiro mostra R$ 0.</strong>
-          Valor total em estoque: <strong className="text-gray-700 dark:text-gray-300">R$ {totalEstoque.toFixed(2)}</strong>
+          Para produtos com <strong>📐 Receita</strong> cadastrada, o custo é calculado automaticamente. Valor total em estoque: <strong className="text-gray-700 dark:text-gray-300">R$ {totalEstoque.toFixed(2)}</strong>
         </p>
       </div>
 
@@ -57,7 +62,7 @@ export default function PrecosPage() {
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="px-4 md:px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tabela de Preços</span>
-          <span className="text-xs text-gray-400">{itens.length} produto(s) · clique em "Editar" para alterar</span>
+          <span className="text-xs text-gray-400">{itens.length} produto(s) · clique em "Editar" ou "📋 Receita"</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -75,15 +80,29 @@ export default function PrecosPage() {
               {itens.map(item => {
                 const preco = precos.find(p => p.itemId === item.id)
                 const editandoAtual = editando === item.id
+                const receita = getReceitaByProduto(item.id)
+                const custoAuto = receita ? custoTotal(item.id, custoUnitario) : 0
                 return (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{item.nome}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">
+                      <div className="flex items-center gap-2">
+                        <span>{item.nome}</span>
+                        {receita && (
+                          <span title="Custo calculado pela receita" className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">📐 Auto</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{CATEGORIAS_BASE.find(c => c.slug === item.categoria)?.nome || item.categoria}</td>
                     <td className="px-4 py-3 text-right">
                       {editandoAtual ? (
                         <input type="number" value={editCusto} min={0} step={0.01}
                           onChange={e => setEditCusto(Number(e.target.value))}
                           className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                      ) : receita ? (
+                        <div className="text-right">
+                          <p className="text-gray-800 dark:text-gray-200 font-semibold">R$ {custoAuto.toFixed(2)}</p>
+                          <p className="text-[9px] text-indigo-500">pela receita</p>
+                        </div>
                       ) : (
                         <span className="text-gray-800 dark:text-gray-200">{preco ? `R$ ${preco.precoCusto.toFixed(2)}` : <span className="text-gray-300">—</span>}</span>
                       )}
@@ -111,8 +130,11 @@ export default function PrecosPage() {
                           <button onClick={() => setEditando(null)} className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200">Cancelar</button>
                         </div>
                       ) : (
-                        <div className="flex gap-1">
+                        <div className="flex flex-wrap gap-1">
                           <button onClick={() => iniciarEdicao(item.id)} className="px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 rounded-md hover:bg-indigo-100">Editar</button>
+                          <button onClick={() => setReceitaItemId(item.id)} className={`px-2 py-1 text-xs font-medium rounded-md ${receita ? 'text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60' : 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100'}`}>
+                            📋 {receita ? 'Receita' : '+ Receita'}
+                          </button>
                           {preco && <button onClick={() => removerPreco(item.id)} className="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-md hover:bg-red-100">Limpar</button>}
                         </div>
                       )}
@@ -138,9 +160,21 @@ export default function PrecosPage() {
           <strong>Preço de Custo</strong> = quanto você paga para adquirir ou produzir o item.<br />
           <strong>Preço de Venda</strong> = quanto o cliente paga na hora da compra.<br />
           <strong>Margem</strong> = (venda − custo) ÷ custo × 100 — mostra o percentual de lucro.<br />
+          <strong>📐 Receita</strong> = cadastre os ingredientes de um produto e o sistema calcula o custo automaticamente (soma de MP × preço).<br />
           Se a margem aparecer em <span className="text-red-600">vermelho</span>, significa que você está vendendo por menos do que custa (prejuízo).
         </p>
       </div>
+
+      {receitaItemId && (() => {
+        const item = todosItens.find(i => i.id === receitaItemId)
+        if (!item) return null
+        return (
+          <ReceitaModal
+            item={item}
+            onClose={() => setReceitaItemId(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

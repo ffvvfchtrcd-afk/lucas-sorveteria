@@ -1,4 +1,5 @@
-import { ItemEstoque } from '../types'
+import { ItemEstoque, gestaoFromTipo } from '../types'
+import GestaoChips from './GestaoChips'
 
 interface Props { itens: ItemEstoque[] }
 
@@ -36,11 +37,12 @@ export default function TabelaEstoque({ itens }: Props) {
                 {item.alerta === 'critico' ? 'Crítico' : item.alerta === 'baixo' ? 'Baixo' : 'OK'}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-1.5">
               <span>Atual: <strong className={`${item.alerta === 'critico' ? 'text-red-600' : item.alerta === 'baixo' ? 'text-yellow-600' : 'text-gray-800 dark:text-gray-200'}`}>{item.quantidadeAtual}</strong></span>
               <span>Mín: <strong>{item.quantidadeMinima}</strong></span>
               <span className="text-gray-400">{item.unidade}</span>
             </div>
+            <GestaoChips gestao={item.gestao || gestaoFromTipo(item.tipo)} compacto />
           </div>
         ))}
       </div>
@@ -54,6 +56,7 @@ export default function TabelaEstoque({ itens }: Props) {
               <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Qtd</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Mín</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Status</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Operações</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Atualiz</th>
             </tr>
           </thead>
@@ -64,6 +67,7 @@ export default function TabelaEstoque({ itens }: Props) {
                 <td className={`px-4 py-3 font-semibold ${item.alerta === 'critico' ? 'text-red-600' : item.alerta === 'baixo' ? 'text-yellow-600' : 'text-gray-700 dark:text-gray-300'}`}>{item.quantidadeAtual} {item.unidade}</td>
                 <td className="px-4 py-3 text-gray-500">{item.quantidadeMinima}</td>
                 <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${alertaStyle[item.alerta]}`}>{item.alerta === 'critico' ? 'Crítico' : item.alerta === 'baixo' ? 'Baixo' : 'OK'}</span></td>
+                <td className="px-4 py-3"><GestaoChips gestao={item.gestao || gestaoFromTipo(item.tipo)} compacto /></td>
                 <td className="px-4 py-3 text-gray-400 text-xs">{item.ultimaAtualizacao}</td>
               </tr>
             ))}

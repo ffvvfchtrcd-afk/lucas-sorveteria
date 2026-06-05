@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
 import { usePreco } from '../context/PrecoContext'
-import { ItemEstoque, VendaItem } from '../types'
+import { ItemEstoque, VendaItem, gestaoFromTipo } from '../types'
 
 export default function PDVPage() {
   const { todosItens, definirQuantidade } = useStock()
@@ -26,7 +26,10 @@ export default function PDVPage() {
   }, [])
 
   const { grupos, categorias } = useMemo(() => {
-    const vendaveis = todosItens.filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0)
+    const vendaveis = todosItens.filter(i => {
+      const g = i.gestao || gestaoFromTipo(i.tipo)
+      return g.permiteVenda && i.quantidadeAtual > 0
+    })
     const g: Record<string, typeof vendaveis> = {}
     const cats: string[] = []
     for (const item of vendaveis) {
@@ -43,7 +46,10 @@ export default function PDVPage() {
     if (!busca.trim()) return []
     const lower = busca.toLowerCase()
     return todosItens
-      .filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0)
+      .filter(i => {
+        const g = i.gestao || gestaoFromTipo(i.tipo)
+        return g.permiteVenda && i.quantidadeAtual > 0
+      })
       .filter(i => i.nome.toLowerCase().includes(lower))
       .slice(0, 15)
   }, [busca, todosItens])

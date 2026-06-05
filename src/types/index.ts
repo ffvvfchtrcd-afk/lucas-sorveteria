@@ -4,6 +4,27 @@ export type CategoriaSlug = 'acai' | 'sorvetes' | 'materias_primas';
 export type TipoMovimentacao = 'entrada' | 'saida' | 'venda' | 'producao' | 'perda' | 'ajuste';
 export type TipoItem = 'venda' | 'producao' | 'ambos';
 
+export interface GestaoItem {
+  permiteEntrada: boolean;
+  permiteSaida: boolean;
+  permiteVenda: boolean;
+  permiteProducao: boolean;
+  receitaId?: string;
+}
+
+export const GESTAO_PADRAO: GestaoItem = {
+  permiteEntrada: true,
+  permiteSaida: true,
+  permiteVenda: true,
+  permiteProducao: true,
+};
+
+export function gestaoFromTipo(tipo?: TipoItem): GestaoItem {
+  if (tipo === 'venda') return { permiteEntrada: true, permiteSaida: true, permiteVenda: true, permiteProducao: false };
+  if (tipo === 'producao') return { permiteEntrada: true, permiteSaida: true, permiteVenda: false, permiteProducao: true };
+  return { ...GESTAO_PADRAO };
+}
+
 export interface ItemEstoque {
   id: string;
   nome: string;
@@ -14,6 +35,7 @@ export interface ItemEstoque {
   alerta: AlertaNivel;
   ultimaAtualizacao: string;
   tipo?: TipoItem;
+  gestao?: GestaoItem;
 }
 
 export interface CustomItemInput {
@@ -24,6 +46,7 @@ export interface CustomItemInput {
   quantidadeMinima: number;
   unidade: UnidadeMedida;
   tipo?: TipoItem;
+  gestao?: GestaoItem;
 }
 
 export interface LimitesItem {
@@ -66,6 +89,7 @@ export interface PrecoItem {
   precoCusto: number;
   precoVenda: number;
   dataAtualizacao: string;
+  custoAuto?: boolean;
 }
 
 export interface LoteValidade {
@@ -91,6 +115,15 @@ export interface Venda {
   itens: VendaItem[];
   total: number;
   data: string;
+}
+
+export interface Receita {
+  id: string;
+  nome: string;
+  produtoId: string;
+  itens: { itemId: string; itemNome: string; quantidade: number; unidade: UnidadeMedida }[];
+  rendimento: number;
+  dataCriacao: string;
 }
 
 export interface ProducaoRegistro {

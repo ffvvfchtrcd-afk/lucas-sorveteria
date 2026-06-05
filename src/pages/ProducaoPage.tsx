@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
-import { ProducaoRegistro } from '../types'
+import { useReceita } from '../context/ReceitaContext'
+import { usePreco } from '../context/PrecoContext'
+import { ProducaoRegistro, gestaoFromTipo } from '../types'
 
 const STORAGE_KEY = 'estoque_producoes'
 
@@ -15,7 +17,8 @@ function carregarProducoes(): ProducaoRegistro[] {
 export default function ProducaoPage() {
   const { todosItens, definirQuantidade, adicionarQuantidade } = useStock()
   const { addLog } = useLog()
-
+  const { getReceitaByProduto } = useReceita()
+  const { precos } = usePreco()
 
   const [producoes, setProducoes] = useState<ProducaoRegistro[]>(carregarProducoes)
   const [nomeProducao, setNomeProducao] = useState('')
@@ -23,6 +26,57 @@ export default function ProducaoPage() {
   const [resultados, setResultados] = useState<{ itemId: string; quantidade: number }[]>([])
   const [buscaIng, setBuscaIng] = useState('')
   const [buscaRes, setBuscaRes] = useState('')
+
+  const produtosComReceita = useMemo(() => {
+    return todosItens
+      .filter(i => {
+        const g = i.gestao || gestaoFromTipo(i.tipo)
+        return g.permiteProducao && getReceitaByProduto(i.id)
+      })
+      .map(i => ({ item: i, receita: getReceitaByProduto(i.id)! }))
+  }, [todosItens, getReceitaByProduto])
+
+  const custoUnitario = (itemId: string) => precos.find(p => p.itemId === itemId)?.precoCusto || 0
+
+  function executarReceita(itemId: string, multiplicador: number = 1) {
+    const receita = getReceitaByProduto(itemId)
+    if (!receita) return
+    const item = todosItens.find(i => i.id === itemId)
+    if (!item) return
+
+    for (const ing of receita.itens) {
+      const mp = todosItens.find(i => i.id === ing.itemId)
+      const qtdNecessaria = ing.quantidade * multiplicador
+      if (!mp || mp.quantidadeAtual < qtdNecessaria) {
+        alert(`❌ Estoque insuficiente de ${mp?.nome || ing.itemNome}. Tem ${mp?.quantidadeAtual || 0} ${mp?.unidade}, precisa ${qtdNecessaria}.`)
+        return
+      }
+    }
+
+    for (const ing of receita.itens) {
+      const mp = todosItens.find(i => i.id === ing.itemId)!
+      const qtd = ing.quantidade * multiplicador
+      definirQuantidade(ing.itemId, mp.quantidadeAtual - qtd)
+      addLog('producao', ing.itemId, mp.nome, -qtd, 'Produção', receita.nome)
+    }
+    const qtdProduzida = receita.rendimento * multiplicador
+    adicionarQuantidade(itemId, qtdProduzida)
+    addLog('producao', itemId, item.nome, qtdProduzida, 'Produção', receita.nome)
+
+    const registro: ProducaoRegistro = {
+      id: `prod_${Date.now()}`,
+      nome: receita.nome,
+      ingredientes: receita.itens.map(i => {
+        const mp = todosItens.find(t => t.id === i.itemId)!
+        return { itemId: i.itemId, itemNome: mp.nome, quantidade: i.quantidade * multiplicador }
+      }),
+      resultados: [{ itemId, itemNome: item.nome, quantidade: qtdProduzida }],
+      data: new Date().toISOString(),
+    }
+    const updated = [registro, ...producoes].slice(0, 500)
+    setProducoes(updated)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  }
 
   const mps = useMemo(() => todosItens.filter(i => (i.tipo === 'producao' || i.tipo === 'ambos' || !i.tipo) && i.quantidadeAtual > 0), [todosItens])
   const produtos = useMemo(() => todosItens.filter(i => (i.tipo === 'venda' || i.tipo === 'ambos' || !i.tipo)), [todosItens])
@@ -126,6 +180,43 @@ export default function ProducaoPage() {
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">🏭 Produção</h1>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Consuma matérias-primas do estoque para gerar novos produtos. Ex: usar leite e cacau para produzir achocolatado.</p>
       </div>
+
+      {produtosComReceita.length > 0 && (
+        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40 border-2 border-indigo-200 dark:border-indigo-900 rounded-2xl p-4 md:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">📐</span>
+            <h2 className="text-base font-semibold text-indigo-800 dark:text-indigo-200">Produção Rápida pela Receita</h2>
+            <span className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-full">{produtosComReceita.length} receita(s)</span>
+          </div>
+          <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-3">Clique para produzir 1 lote usando a ficha técnica. Custo e ingredientes calculados automaticamente.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {produtosComReceita.map(({ item, receita }) => {
+              const custoReceita = receita.itens.reduce((acc, it) => acc + custoUnitario(it.itemId) * it.quantidade, 0)
+              const custoUnit = receita.rendimento > 0 ? custoReceita / receita.rendimento : custoReceita
+              const faltam = receita.itens.filter(ing => {
+                const mp = todosItens.find(i => i.id === ing.itemId)
+                return !mp || mp.quantidadeAtual < ing.quantidade
+              })
+              const podeProduzir = faltam.length === 0
+              return (
+                <div key={item.id} className={`p-3 rounded-xl border ${podeProduzir ? 'bg-white dark:bg-gray-900 border-indigo-200 dark:border-indigo-900' : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{receita.nome}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{receita.itens.length} ing · custo R$ {custoUnit.toFixed(2)}/{item.unidade}</p>
+                    </div>
+                    <button
+                      onClick={() => podeProduzir ? executarReceita(item.id, 1) : alert(`❌ Estoque insuficiente:\n${faltam.map(f => `• ${todosItens.find(t => t.id === f.itemId)?.nome}: tem ${todosItens.find(t => t.id === f.itemId)?.quantidadeAtual || 0}, precisa ${f.quantidade}`).join('\n')}`)}
+                      className={`shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${podeProduzir ? 'text-white bg-indigo-600 hover:bg-indigo-700' : 'text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-help'}`}>
+                      {podeProduzir ? '▶ Produzir 1 lote' : '⚠ Sem MP'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-6 space-y-4">
