@@ -34,6 +34,7 @@ const gruposFinanceiro = [
       { to: '/financeiro/resumo', label: 'Resumo (Lucros)', icon: '📈' },
       { to: '/financeiro/gastos', label: 'Gastos & Despesas', icon: '💸' },
       { to: '/financeiro/metas', label: 'Metas Financeiras', icon: '🎯' },
+      { to: '/financeiro/usuarios', label: 'Usuários', icon: '👥', adminOnly: true },
     ],
   },
 ]
@@ -85,6 +86,7 @@ const tabsFinanceiro = [
   { to: '/financeiro/resumo', label: 'Lucros', icon: '📈' },
   { to: '/financeiro/gastos', label: 'Gastos', icon: '💸' },
   { to: '/financeiro/metas', label: 'Metas', icon: '🎯' },
+  { to: '/financeiro/usuarios', label: 'Usuários', icon: '👥', adminOnly: true },
 ]
 
 const MODULOS = [
@@ -101,9 +103,12 @@ export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const gruposAtivos = modulo === 'caixa' ? gruposCaixa
+  const gruposAtivos = (modulo === 'caixa' ? gruposCaixa
     : modulo === 'financeiro' ? gruposFinanceiro
-    : gruposEstoqueBase
+    : gruposEstoqueBase).map(g => ({
+      ...g,
+      links: g.links.filter(l => !('adminOnly' in l && l.adminOnly) || isAdmin),
+    })).filter(g => g.links.length > 0)
 
   const isActive = (path: string) => {
     if (path === '/estoque') return location.pathname === '/estoque'
@@ -169,7 +174,7 @@ export default function Sidebar() {
     </aside>
   )
 
-  const tabsMobile = modulo === 'caixa' ? tabsCaixa : modulo === 'financeiro' ? tabsFinanceiro : tabsEstoque
+  const tabsMobile = (modulo === 'caixa' ? tabsCaixa : modulo === 'financeiro' ? tabsFinanceiro : tabsEstoque).filter(t => !('adminOnly' in t && t.adminOnly) || isAdmin)
 
   const menuOverlay = (
     <div className="fixed inset-0 z-50 md:hidden transition-opacity duration-200" onClick={close}>

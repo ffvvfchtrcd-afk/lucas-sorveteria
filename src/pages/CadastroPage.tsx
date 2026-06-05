@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useStock } from '../context/StockContext'
 import { CustomItemInput, CATEGORIAS_BASE, UNIDADES, UnidadeMedida, GestaoItem, gestaoFromTipo, GESTAO_PADRAO } from '../types'
 import GestaoChips, { FLAGS_LIST } from '../components/GestaoChips'
+import { useToast } from '../context/ToastContext'
 
 export default function CadastroPage() {
   const { customItems, adicionarItemPersonalizado, removerItemPersonalizado, editarItemPersonalizado } = useStock()
+  const toast = useToast()
 
   const [nome, setNome] = useState('')
   const [categoria, setCategoria] = useState('materias_primas')
@@ -13,7 +15,6 @@ export default function CadastroPage() {
   const [quantidadeAtual, setQuantidadeAtual] = useState(0)
   const [quantidadeMinima, setQuantidadeMinima] = useState(10)
   const [categoriaCustom, setCategoriaCustom] = useState('')
-  const [sucesso, setSucesso] = useState('')
   const [editId, setEditId] = useState<string | null>(null)
 
   const toggleFlag = (key: keyof Omit<GestaoItem, 'receitaId'>) => {
@@ -35,7 +36,7 @@ export default function CadastroPage() {
 
     if (editId) {
       editarItemPersonalizado(editId, { nome: nome.trim(), categoria: catFinal, unidade, quantidadeMinima, gestao, tipo })
-      setSucesso(`✓ "${nome.trim()}" atualizado!`)
+      toast.sucesso('Produto atualizado', `"${nome.trim()}" foi editado com sucesso.`)
     } else {
       const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
       const item: CustomItemInput = {
@@ -49,13 +50,12 @@ export default function CadastroPage() {
         tipo,
       }
       adicionarItemPersonalizado(item)
-      setSucesso(`✓ "${item.nome}" adicionado com sucesso! Agora ele aparece nas categorias do sistema.`)
+      toast.sucesso('Produto criado!', `"${item.nome}" já aparece no sistema. Vá em Preços para definir custo e venda.`)
     }
     setNome('')
     setQuantidadeAtual(0)
     setEditId(null)
     setGestao({ ...GESTAO_PADRAO })
-    setTimeout(() => setSucesso(''), 4000)
   }
 
   function handleEditar(item: CustomItemInput) {
@@ -76,6 +76,7 @@ export default function CadastroPage() {
         setNome('')
         setGestao({ ...GESTAO_PADRAO })
       }
+      toast.erro('Produto removido', `"${nome}" foi excluído do estoque.`)
     }
   }
 
@@ -93,12 +94,6 @@ export default function CadastroPage() {
           Crie produtos personalizados que não existem nas categorias padrão (açaí, sorvetes, matérias-primas). Escolha nome, unidade, operações permitidas e quantidade inicial. Depois de cadastrar, vá em <strong>Preços</strong> para definir custo e preço de venda.
         </p>
       </div>
-
-      {sucesso && (
-        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-xl p-4 text-sm text-green-700 dark:text-green-300 animate-pulse flex items-center gap-2">
-          <span>✅</span> {sucesso}
-        </div>
-      )}
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-6">
         <div className="flex items-center gap-3 mb-4">

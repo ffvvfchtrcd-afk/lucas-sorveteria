@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
 import { usePreco } from '../context/PrecoContext'
+import { useToast } from '../context/ToastContext'
 import { TipoMovimentacao } from '../types'
 
 type FiltroTipo = '' | TipoMovimentacao
@@ -112,6 +113,7 @@ function labelCabecalho(iso: string, granularidade: 'dia' | 'semana' | 'mes'): s
 export default function MovimentacoesPage() {
   const { logs, addLog, limparLogs } = useLog()
   const { todosItens, definirQuantidade } = useStock()
+  const toast = useToast()
   const { getPreco } = usePreco()
 
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('')
@@ -203,7 +205,7 @@ export default function MovimentacoesPage() {
     if (!perdaItem || perdaQtd <= 0) return
     const item = todosItens.find(i => i.id === perdaItem)
     if (!item || item.quantidadeAtual < perdaQtd) {
-      alert(`❌ Estoque insuficiente. "${item?.nome}" tem apenas ${item?.quantidadeAtual} ${item?.unidade} disponível(is).`)
+      toast.erro('Estoque insuficiente', `"${item?.nome}" tem apenas ${item?.quantidadeAtual} ${item?.unidade} disponível.`)
       return
     }
     definirQuantidade(perdaItem, item.quantidadeAtual - perdaQtd)
@@ -212,6 +214,7 @@ export default function MovimentacoesPage() {
     setPerdaQtd(0)
     setPerdaObs('')
     setMostrarPerda(false)
+    toast.alerta('Perda registrada', `${perdaQtd} ${item.unidade} de "${item.nome}" · ${perdaMotivo}`)
   }
 
   function exportarCSV() {

@@ -10,6 +10,7 @@ import { ValidadeProvider } from './context/ValidadeContext'
 import { GastosProvider } from './context/GastosContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { ToastProvider } from './context/ToastContext'
 import Sidebar from './components/Sidebar'
 import BuscaGlobal from './components/BuscaGlobal'
 import Home from './pages/Home'
@@ -32,6 +33,7 @@ import ProdutosPage from './pages/ProdutosPage'
 import GastosPage from './pages/GastosPage'
 import FinanceiroPage from './pages/FinanceiroPage'
 import MetasPage from './pages/MetasPage'
+import UsuariosPage from './pages/UsuariosPage'
 
 interface SidebarCtx {
   open: boolean
@@ -67,6 +69,7 @@ export default function App() {
       <GastosProvider>
       <NotificationProvider>
       <ConfigProvider>
+        <ToastProvider>
         <SidebarContext.Provider value={{ open, toggle: () => setOpen(v => !v), close: () => setOpen(false) }}>
         {isHome ? (
           <Home />
@@ -101,6 +104,7 @@ export default function App() {
                 <Route path="/financeiro/gastos" element={<GastosPage />} />
                 <Route path="/financeiro/resumo" element={<FinanceiroPage />} />
                 <Route path="/financeiro/metas" element={<MetasPage />} />
+                <Route path="/financeiro/usuarios" element={<UsuariosPage />} />
               </Routes>
               </div>
             </main>
@@ -108,6 +112,7 @@ export default function App() {
           </AuthGuard>
         )}
         </SidebarContext.Provider>
+        </ToastProvider>
       </ConfigProvider>
       </NotificationProvider>
       </GastosProvider>

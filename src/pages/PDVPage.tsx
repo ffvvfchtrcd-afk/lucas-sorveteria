@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
 import { usePreco } from '../context/PrecoContext'
+import { useToast } from '../context/ToastContext'
 import { ItemEstoque, VendaItem, gestaoFromTipo } from '../types'
 
 type SheetState =
@@ -13,6 +14,7 @@ export default function PDVPage() {
   const { todosItens, definirQuantidade } = useStock()
   const { addLog } = useLog()
   const { getPreco } = usePreco()
+  const toast = useToast()
 
   const [carrinho, setCarrinho] = useState<VendaItem[]>([])
   const [busca, setBusca] = useState('')
@@ -102,6 +104,8 @@ export default function PDVPage() {
 
   function finalizarVenda() {
     if (carrinho.length === 0) return
+    const totalVenda = carrinho.reduce((acc, v) => acc + v.subtotal, 0)
+    const qtd = carrinho.reduce((acc, v) => acc + v.quantidade, 0)
     for (const item of carrinho) {
       const atual = todosItens.find(i => i.id === item.itemId)?.quantidadeAtual ?? 0
       definirQuantidade(item.itemId, atual - item.quantidade)
@@ -109,6 +113,7 @@ export default function PDVPage() {
     }
     setFinalizado(true)
     setSheet({ tipo: 'fechado' })
+    toast.sucesso('Venda finalizada!', `${qtd} ${qtd === 1 ? 'item' : 'itens'} · R$ ${totalVenda.toFixed(2)}`)
     setTimeout(() => {
       setCarrinho([])
       setFinalizado(false)

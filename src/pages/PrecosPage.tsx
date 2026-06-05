@@ -4,11 +4,13 @@ import { usePreco } from '../context/PrecoContext'
 import { useReceita } from '../context/ReceitaContext'
 import { CATEGORIAS_BASE, UnidadeMedida } from '../types'
 import ReceitaModal from '../components/ReceitaModal'
+import { useToast } from '../context/ToastContext'
 
 export default function PrecosPage() {
   const { todosItens } = useStock()
   const { precos, setPreco, removerPreco } = usePreco()
   const { getReceitaByProduto, calcularCusto, custoTotal } = useReceita()
+  const toast = useToast()
 
   const [filtro, setFiltro] = useState<string>('todas')
   const [editando, setEditando] = useState<string | null>(null)
@@ -33,6 +35,14 @@ export default function PrecosPage() {
   function salvar(itemId: string, itemNome: string) {
     setPreco(itemId, itemNome, editCusto, editVenda)
     setEditando(null)
+    const margem = editCusto > 0 ? `Margem: ${(((editVenda - editCusto) / editCusto) * 100).toFixed(0)}%` : ''
+    toast.sucesso('Preço salvo!', `"${itemNome}" → Custo R$ ${editCusto.toFixed(2)} · Venda R$ ${editVenda.toFixed(2)} ${margem}`)
+  }
+
+  function limpar(itemId: string, itemNome: string) {
+    removerPreco(itemId)
+    if (editando === itemId) setEditando(null)
+    toast.info('Preço removido', `Os preços de "${itemNome}" foram limpos.`)
   }
 
   const totalEstoque = precos.reduce((acc, p) => {
@@ -135,7 +145,7 @@ export default function PrecosPage() {
                           <button onClick={() => setReceitaItemId(item.id)} className={`px-2 py-1 text-xs font-medium rounded-md ${receita ? 'text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60' : 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100'}`}>
                             📋 {receita ? 'Receita' : '+ Receita'}
                           </button>
-                          {preco && <button onClick={() => removerPreco(item.id)} className="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-md hover:bg-red-100">Limpar</button>}
+                          {preco && <button onClick={() => limpar(item.id, item.nome)} className="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-md hover:bg-red-100">Limpar</button>}
                         </div>
                       )}
                     </td>

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useGastos } from '../context/GastosContext'
 import { useStock } from '../context/StockContext'
 import { useLog } from '../context/LogContext'
+import { useToast } from '../context/ToastContext'
 import { DESPESA_TIPOS, DespesaTipo } from '../types'
 
 interface LotePreview {
@@ -76,6 +77,7 @@ export default function GastosPage() {
   const { despesas, adicionarDespesa, removerDespesa } = useGastos()
   const { adicionarQuantidade, definirQuantidade, todosItens } = useStock()
   const { addLog } = useLog()
+  const toast = useToast()
   const [mostrarForm, setMostrarForm] = useState(false)
   const [tipo, setTipo] = useState<DespesaTipo>('energia')
   const [valor, setValor] = useState(0)
@@ -96,6 +98,7 @@ export default function GastosPage() {
     adicionarDespesa(parsed.tipo, parsed.valor, parsed.descricao, parsed.data)
     if (parsed.tipo === 'perda') processarPerda(parsed.descricao, parsed.valor)
     setRapidoTexto('')
+    toast.sucesso('Despesa registrada!', `${DESPESA_TIPOS.find(x => x.value === parsed.tipo)?.icone} ${parsed.descricao} — R$ ${parsed.valor.toFixed(2)}`)
   }
 
   function processarPerda(descricao: string, valor: number) {
@@ -129,12 +132,15 @@ export default function GastosPage() {
   }
 
   function confirmarLote() {
+    if (preview.length === 0) return
+    const total = preview.reduce((s, i) => s + i.valor, 0)
     for (const item of preview) {
       adicionarDespesa(item.tipo, item.valor, item.descricao, item.data)
       if (item.tipo === 'perda') processarPerda(item.descricao, item.valor)
     }
     setPreview([])
     setLoteTexto('')
+    toast.sucesso(`${preview.length} despesa(s) registrada(s)`, `Total: R$ ${total.toFixed(2)}`)
   }
 
   function handleAdicionar() {
@@ -142,6 +148,7 @@ export default function GastosPage() {
     adicionarDespesa(tipo, valor, descricao.trim(), data, observacao.trim() || undefined)
     if (tipo === 'perda') processarPerda(descricao, valor)
     setValor(0); setDescricao(''); setObservacao(''); setMostrarForm(false)
+    toast.sucesso('Despesa registrada!', `${DESPESA_TIPOS.find(x => x.value === tipo)?.icone} ${descricao.trim()} — R$ ${valor.toFixed(2)}`)
   }
 
   const filtradas = useMemo(() => {
@@ -347,7 +354,7 @@ export default function GastosPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-semibold text-red-600">-R$ {d.valor.toFixed(2)}</span>
-                      <button onClick={() => { if (window.confirm(`Remover "${d.descricao}"?`)) removerDespesa(d.id) }}
+                      <button onClick={() => { if (window.confirm(`Remover "${d.descricao}"?`)) { removerDespesa(d.id); toast.info('Despesa removida', d.descricao) } }}
                         className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
                     </div>
                   </div>

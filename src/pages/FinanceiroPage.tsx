@@ -7,6 +7,7 @@ import { DESPESA_TIPOS, DespesaTipo } from '../types'
 import { chatCompletionWithRetry, Message } from '../services/openrouter'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 
 type Periodo = 'hoje' | 'ontem' | 'semana' | 'mes' | 'mesPassado' | 'ano' | 'total' | 'custom'
 type Granularidade = 'hora' | 'dia' | 'semana' | 'mes'
@@ -226,6 +227,36 @@ export default function FinanceiroPage() {
     return Array.from(map.entries()).sort((a, b) => b[1].receita - a[1].receita).slice(0, 5)
   }, [vendasNoPeriodo, precos, todosItens])
   const maxTop = Math.max(...topProdutos.map(([, v]) => v.receita), 1)
+
+  // ── Dados para gráficos Recharts ──
+  const trendDiarioChart = useMemo(() => trendDiario.map(d => ({
+    dia: d.dia.slice(5),
+    Receita: Number(d.receita.toFixed(2)),
+    Custo: Number(d.custo.toFixed(2)),
+    Lucro: Number((d.receita - d.custo).toFixed(2)),
+  })), [trendDiario])
+
+  const despesasPieChart = useMemo(() => despesasPorTipo.map(([tipo, valor]) => {
+    const info = DESPESA_TIPOS.find(dt => dt.value === tipo)
+    return {
+      name: info?.label || tipo,
+      value: Number(valor.toFixed(2)),
+      icone: info?.icone || '💰',
+    }
+  }), [despesasPorTipo])
+
+  const topProdutosChart = useMemo(() => topProdutos.slice(0, 8).map(([id, info]) => {
+    const item = todosItens.find(i => i.id === id)
+    return {
+      nome: item?.nome?.slice(0, 14) || id,
+      Receita: Number(info.receita.toFixed(2)),
+      Lucro: Number((info.receita - info.custo).toFixed(2)),
+    }
+  }), [topProdutos, todosItens])
+
+  const PIE_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1']
+
+  const formatBRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
   const periodos: { id: Periodo; label: string; emoji: string }[] = [
     { id: 'hoje', label: 'Hoje', emoji: '📅' },
@@ -632,6 +663,92 @@ ${vendasMes.length} vendas registradas
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* 📊 Gráficos Interativos (Recharts) */}
+          {trendDiarioChart.some(d => d.Receita > 0) && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">📈 Evolução 14 dias</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={trendDiarioChart} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gRec" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.6} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gCust" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gLuc" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:opacity-20" />
+                  <XAxis dataKey="dia" tick={{ fontSize: 10 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `R$${v}`} />
+                  <Tooltip
+                    contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                    formatter={(v: number) => `R$ ${v.toFixed(2)}`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Area type="monotone" dataKey="Receita" stroke="#10b981" fill="url(#gRec)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="Custo" stroke="#f59e0b" fill="url(#gCust)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="Lucro" stroke="#3b82f6" fill="url(#gLuc)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {despesasPieChart.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">🥧 Composição de Despesas</h3>
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <ResponsiveContainer width="100%" height={220} minWidth={220}>
+                  <PieChart>
+                    <Pie data={despesasPieChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={2}>
+                      {despesasPieChart.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                      formatter={(v: number) => `R$ ${v.toFixed(2)}`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-1 min-w-0">
+                  {despesasPieChart.map((d, i) => (
+                    <div key={d.name} className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="text-gray-700 dark:text-gray-300 truncate">{d.icone} {d.name}</span>
+                      </div>
+                      <span className="font-medium text-gray-800 dark:text-gray-200 shrink-0">{formatBRL(d.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {topProdutosChart.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">🏆 Top 8 Produtos (14 dias)</h3>
+              <ResponsiveContainer width="100%" height={Math.max(180, topProdutosChart.length * 28)}>
+                <BarChart data={topProdutosChart} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:opacity-20" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `R$${v}`} />
+                  <YAxis dataKey="nome" type="category" tick={{ fontSize: 10 }} stroke="#9ca3af" width={80} />
+                  <Tooltip
+                    contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                    formatter={(v: number) => `R$ ${v.toFixed(2)}`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="Receita" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="Lucro" fill="#10b981" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
 
