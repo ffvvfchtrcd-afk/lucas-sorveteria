@@ -8,20 +8,57 @@ import { chatCompletionWithRetry, Message } from '../services/openrouter'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-type Periodo = 'hoje' | 'mes' | 'ano' | 'total'
+type Periodo = 'hoje' | 'ontem' | 'semana' | 'mes' | 'mesPassado' | 'ano' | 'total' | 'custom'
+type Granularidade = 'hora' | 'dia' | 'semana' | 'mes'
 type Aba = 'resumo' | 'inteligencia'
 
 const API_KEY_STORAGE = 'openrouter_key'
 
-function getPeriodo(t: Periodo): [string, string] {
+const MOTIVOS_PERDA_LABELS: Record<string, string> = {
+  vencido: 'Vencido', quebrado: 'Danificado', contaminado: 'Contaminado', extraviado: 'Extraviado', outro: 'Outro',
+}
+
+function inicioFimDoDia(d: Date) {
+  const inicio = new Date(d); inicio.setHours(0, 0, 0, 0)
+  const fim = new Date(d); fim.setHours(23, 59, 59, 999)
+  return { inicio, fim }
+}
+
+function getPeriodo(t: Periodo, customInicio?: string, customFim?: string, horaIni?: string, horaFim?: string): { inicio: Date; fim: Date } {
   const agora = new Date()
-  const y = agora.getFullYear()
-  const m = String(agora.getMonth() + 1).padStart(2, '0')
-  const d = String(agora.getDate()).padStart(2, '0')
-  if (t === 'hoje') return [`${y}-${m}-${d}`, `${y}-${m}-${d}`]
-  if (t === 'mes') return [`${y}-${m}-01`, `${y}-${m}-31`]
-  if (t === 'ano') return [`${y}-01-01`, `${y}-12-31`]
-  return ['2000-01-01', '2099-12-31']
+  if (t === 'hoje') {
+    const { inicio, fim } = inicioFimDoDia(agora)
+    if (horaIni && horaFim) { const [h1, m1] = horaIni.split(':').map(Number); const [h2, m2] = horaFim.split(':').map(Number); inicio.setHours(h1, m1, 0, 0); fim.setHours(h2, m2, 59, 999) }
+    return { inicio, fim }
+  }
+  if (t === 'ontem') {
+    const o = new Date(agora); o.setDate(agora.getDate() - 1)
+    return inicioFimDoDia(o)
+  }
+  if (t === 'semana') {
+    const inicio = new Date(agora); inicio.setDate(agora.getDate() - 6)
+    return { inicio: inicioFimDoDia(inicio).inicio, fim: inicioFimDoDia(agora).fim }
+  }
+  if (t === 'mes') {
+    const inicio = new Date(agora.getFullYear(), agora.getMonth(), 1)
+    return { inicio: inicioFimDoDia(inicio).inicio, fim: inicioFimDoDia(agora).fim }
+  }
+  if (t === 'mesPassado') {
+    const inicio = new Date(agora.getFullYear(), agora.getMonth() - 1, 1)
+    const fim = new Date(agora.getFullYear(), agora.getMonth(), 0)
+    return { inicio: inicioFimDoDia(inicio).inicio, fim: inicioFimDoDia(fim).fim }
+  }
+  if (t === 'ano') {
+    const inicio = new Date(agora.getFullYear(), 0, 1)
+    return { inicio: inicioFimDoDia(inicio).inicio, fim: inicioFimDoDia(agora).fim }
+  }
+  if (t === 'custom' && customInicio && customFim) {
+    const i = new Date(customInicio + 'T00:00:00')
+    const f = new Date(customFim + 'T23:59:59')
+    if (horaIni && horaFim) { const [h1, m1] = horaIni.split(':').map(Number); const [h2, m2] = horaFim.split(':').map(Number); i.setHours(h1, m1, 0, 0); f.setHours(h2, m2, 59, 999) }
+    return { inicio: i, fim: f }
+  }
+  return { inicio: new Date('2000-01-01'), fim: new Date('2099-12-31') }
 }
 
 function diasDoMes(ano: number, mes: number): string[] {
@@ -74,6 +111,14 @@ export default function FinanceiroPage() {
   const { precos } = usePreco()
   const { despesas } = useGastos()
   const [periodoAtivo, setPeriodoAtivo] = useState<Periodo>('mes')
+  const [granularidade, setGranularidade] = useState<Granularidade>('dia')
+  const [customInicio, setCustomInicio] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01` })
+  const [customFim, setCustomFim] = useState(() => new Date().toISOString().slice(0, 10))
+  const [usarHorario, setUsarHorario] = useState(false)
+  const [horaIni, setHoraIni] = useState('08:00')
+  const [horaFim, setHoraFim] = useState('22:00')
+  const [sortLucroProd, setSortLucroProd] = useState<'lucro' | 'receita' | 'margem' | 'qtd'>('lucro')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [aba, setAba] = useState<Aba>('resumo')
 
   // ── Financeiro IA ──
@@ -87,15 +132,29 @@ export default function FinanceiroPage() {
 
   useEffect(() => { aiEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [aiMessages])
 
-  const [inicio, fim] = getPeriodo(periodoAtivo)
+  const { inicio, fim } = useMemo(() => getPeriodo(periodoAtivo, customInicio, customFim, usarHorario ? horaIni : undefined, usarHorario ? horaFim : undefined), [periodoAtivo, customInicio, customFim, usarHorario, horaIni, horaFim])
   const hoje = new Date().toISOString().slice(0, 10)
   const mesAtual = hoje.slice(0, 7)
 
   const vendas = useMemo(() => logs.filter(l => l.tipo === 'venda'), [logs])
 
+  const inicioStr = inicio.toISOString()
+  const fimStr = fim.toISOString()
+
   const vendasNoPeriodo = useMemo(() =>
-    vendas.filter(l => (l.data || '').slice(0, 10) >= inicio && (l.data || '').slice(0, 10) <= fim),
+    vendas.filter(l => {
+      const t = new Date(l.data).getTime()
+      return t >= inicio.getTime() && t <= fim.getTime()
+    }),
   [vendas, inicio, fim])
+
+  const perdasLogsNoPeriodo = useMemo(() =>
+    logs.filter(l => {
+      if (l.tipo !== 'perda') return false
+      const t = new Date(l.data).getTime()
+      return t >= inicio.getTime() && t <= fim.getTime()
+    }),
+  [logs, inicio, fim])
 
   const receita = useMemo(() =>
     vendasNoPeriodo.reduce((s, v) => s + ((precos.find(p => p.itemId === v.itemId)?.precoVenda || 0)) * v.quantidade, 0),
@@ -106,22 +165,21 @@ export default function FinanceiroPage() {
   [vendasNoPeriodo, precos])
 
   const perdasNoPeriodo = useMemo(() =>
-    logs.filter(l => l.tipo === 'perda' && (l.data || '').slice(0, 10) >= inicio && (l.data || '').slice(0, 10) <= fim)
-      .reduce((s, l) => s + ((precos.find(p => p.itemId === l.itemId)?.precoCusto || 0)) * Math.abs(l.quantidade), 0),
-  [logs, inicio, fim, precos])
+    perdasLogsNoPeriodo.reduce((s, l) => s + ((precos.find(p => p.itemId === l.itemId)?.precoCusto || 0)) * Math.abs(l.quantidade), 0),
+  [perdasLogsNoPeriodo, precos])
 
   const despesasNoPeriodo = useMemo(() =>
-    despesas.filter(d => d.data >= inicio && d.data <= fim).reduce((s, d) => s + d.valor, 0),
-  [despesas, inicio, fim])
+    despesas.filter(d => d.data >= inicioStr.slice(0, 10) && d.data <= fimStr.slice(0, 10)).reduce((s, d) => s + d.valor, 0),
+  [despesas, inicioStr, fimStr])
 
   const totalDespesas = despesasNoPeriodo + perdasNoPeriodo
 
   const despesasPorTipo = useMemo(() => {
-    const filtradas = despesas.filter(d => d.data >= inicio && d.data <= fim)
+    const filtradas = despesas.filter(d => d.data >= inicioStr.slice(0, 10) && d.data <= fimStr.slice(0, 10))
     const map = new Map<string, number>()
     for (const d of filtradas) map.set(d.tipo, (map.get(d.tipo) || 0) + d.valor)
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1])
-  }, [despesas, inicio, fim])
+  }, [despesas, inicioStr, fimStr])
 
   const totais = useMemo(() => {
     const lucroBruto = receita - custoMercadorias
@@ -169,13 +227,119 @@ export default function FinanceiroPage() {
   }, [vendasNoPeriodo, precos, todosItens])
   const maxTop = Math.max(...topProdutos.map(([, v]) => v.receita), 1)
 
-  const periodos: { id: Periodo; label: string }[] = [
-    { id: 'hoje', label: 'Hoje' },
-    { id: 'mes', label: 'Este Mês' },
-    { id: 'ano', label: 'Este Ano' },
-    { id: 'total', label: 'Total Geral' },
+  const periodos: { id: Periodo; label: string; emoji: string }[] = [
+    { id: 'hoje', label: 'Hoje', emoji: '📅' },
+    { id: 'ontem', label: 'Ontem', emoji: '📆' },
+    { id: 'semana', label: '7 dias', emoji: '🗓' },
+    { id: 'mes', label: 'Este mês', emoji: '🗓' },
+    { id: 'mesPassado', label: 'Mês passado', emoji: '📋' },
+    { id: 'ano', label: 'Este ano', emoji: '📊' },
+    { id: 'total', label: 'Tudo', emoji: '♾️' },
+    { id: 'custom', label: 'Personalizado', emoji: '🔍' },
   ]
   const periodoLabel = periodos.find(p => p.id === periodoAtivo)?.label || ''
+
+  // ── Lucro por produto (completo, ordenável) ──
+  const lucroPorProduto = useMemo(() => {
+    const map = new Map<string, { nome: string; qtd: number; receita: number; custo: number; unidade: string }>()
+    for (const v of vendasNoPeriodo) {
+      const p = precos.find(p => p.itemId === v.itemId)
+      const item = todosItens.find(i => i.id === v.itemId)
+      const ex = map.get(v.itemId)
+      const receitaAdd = (p?.precoVenda || 0) * v.quantidade
+      const custoAdd = (p?.precoCusto || 0) * v.quantidade
+      if (ex) { ex.qtd += v.quantidade; ex.receita += receitaAdd; ex.custo += custoAdd }
+      else map.set(v.itemId, { nome: item?.nome || v.itemNome || v.itemId, qtd: v.quantidade, receita: receitaAdd, custo: custoAdd, unidade: item?.unidade || 'un' })
+    }
+    const arr = Array.from(map.entries()).map(([id, v]) => ({ id, ...v, lucro: v.receita - v.custo, margem: v.custo > 0 ? ((v.receita - v.custo) / v.custo) * 100 : 0 }))
+    arr.sort((a, b) => {
+      const av = a[sortLucroProd]; const bv = b[sortLucroProd]
+      return sortDir === 'desc' ? (bv as number) - (av as number) : (av as number) - (bv as number)
+    })
+    return arr
+  }, [vendasNoPeriodo, precos, todosItens, sortLucroProd, sortDir])
+
+  // ── Análise por horário (vendas agrupadas por hora do dia 0-23) ──
+  const porHorario = useMemo(() => {
+    const buckets: { hora: number; receita: number; custo: number; lucro: number; qtd: number; transacoes: number }[] = []
+    for (let h = 0; h < 24; h++) buckets.push({ hora: h, receita: 0, custo: 0, lucro: 0, qtd: 0, transacoes: 0 })
+    for (const v of vendasNoPeriodo) {
+      const h = new Date(v.data).getHours()
+      const p = precos.find(p => p.itemId === v.itemId)
+      const r = (p?.precoVenda || 0) * v.quantidade
+      const c = (p?.precoCusto || 0) * v.quantidade
+      buckets[h].receita += r
+      buckets[h].custo += c
+      buckets[h].lucro += r - c
+      buckets[h].qtd += v.quantidade
+      buckets[h].transacoes += 1
+    }
+    return buckets
+  }, [vendasNoPeriodo, precos])
+  const maxHorario = Math.max(...porHorario.map(b => b.receita), 1)
+
+  // ── Análise por granularidade (dia/semana/mês) ──
+  const porGranularidade = useMemo(() => {
+    const map = new Map<string, { chave: string; dataRef: Date; receita: number; custo: number; lucro: number; transacoes: number }>()
+    for (const v of vendasNoPeriodo) {
+      const d = new Date(v.data)
+      let chave = ''
+      let dataRef: Date
+      if (granularidade === 'hora') {
+        chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`
+        dataRef = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours())
+      } else if (granularidade === 'dia') {
+        chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+        dataRef = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      } else if (granularidade === 'semana') {
+        const ini = new Date(d); ini.setDate(d.getDate() - d.getDay()); ini.setHours(0, 0, 0, 0)
+        chave = `s${ini.getTime()}`
+        dataRef = ini
+      } else {
+        chave = `${d.getFullYear()}-${d.getMonth()}`
+        dataRef = new Date(d.getFullYear(), d.getMonth(), 1)
+      }
+      if (!map.has(chave)) map.set(chave, { chave, dataRef, receita: 0, custo: 0, lucro: 0, transacoes: 0 })
+      const item = map.get(chave)!
+      const p = precos.find(p => p.itemId === v.itemId)
+      const r = (p?.precoVenda || 0) * v.quantidade
+      const c = (p?.precoCusto || 0) * v.quantidade
+      item.receita += r; item.custo += c; item.lucro += r - c; item.transacoes += 1
+    }
+    return Array.from(map.values()).sort((a, b) => b.dataRef.getTime() - a.dataRef.getTime())
+  }, [vendasNoPeriodo, precos, granularidade])
+  const maxGran = Math.max(...porGranularidade.map(g => g.receita), 1)
+
+  const labelGranularidade = (dataRef: Date): string => {
+    if (granularidade === 'hora') return dataRef.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    if (granularidade === 'dia') {
+      const hoje = new Date(); const ontem = new Date(); ontem.setDate(hoje.getDate() - 1)
+      const m = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+      if (m(dataRef, hoje)) return 'Hoje'
+      if (m(dataRef, ontem)) return 'Ontem'
+      return dataRef.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+    }
+    if (granularidade === 'semana') {
+      const fim = new Date(dataRef); fim.setDate(dataRef.getDate() + 6)
+      return `${dataRef.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${fim.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`
+    }
+    return dataRef.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  }
+
+  // ── Perdas detalhadas (por item + motivo) ──
+  const perdasDetalhadas = useMemo(() => {
+    const map = new Map<string, { nome: string; qtd: number; valor: number; motivos: Record<string, number> }>()
+    for (const p of perdasLogsNoPeriodo) {
+      if (!map.has(p.itemId)) map.set(p.itemId, { nome: p.itemNome, qtd: 0, valor: 0, motivos: {} })
+      const item = map.get(p.itemId)!
+      item.qtd += Math.abs(p.quantidade)
+      const preco = precos.find(pp => pp.itemId === p.itemId)
+      item.valor += (preco?.precoCusto || 0) * Math.abs(p.quantidade)
+      const motivo = (p.motivo || 'outro').split(':')[0].trim()
+      item.motivos[motivo] = (item.motivos[motivo] || 0) + 1
+    }
+    return Array.from(map.entries()).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.valor - a.valor)
+  }, [perdasLogsNoPeriodo, precos])
 
   const sugestoesFinanceiras = [
     'Analise minhas finanças do mês',
@@ -290,12 +454,66 @@ ${vendasMes.length} vendas registradas
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 overflow-x-auto">
             {periodos.map(p => (
               <button key={p.id} onClick={() => setPeriodoAtivo(p.id)}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+                className={`flex-1 px-2.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-colors flex items-center justify-center gap-1 ${
                   periodoAtivo === p.id
                     ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
                     : 'text-gray-500 dark:text-gray-400'
                 }`}>
-                {p.label}
+                <span>{p.emoji}</span>
+                <span>{p.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {(periodoAtivo === 'custom' || usarHorario) && (
+            <div className="flex flex-wrap items-end gap-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+              {periodoAtivo === 'custom' && (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-medium text-gray-500 mb-0.5">De</label>
+                    <input type="date" value={customInicio} max={customFim}
+                      onChange={e => setCustomInicio(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Até</label>
+                    <input type="date" value={customFim} min={customInicio}
+                      onChange={e => setCustomFim(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  </div>
+                </>
+              )}
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                <input type="checkbox" checked={usarHorario} onChange={e => setUsarHorario(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-indigo-600" />
+                <span>⏰ Filtrar por horário</span>
+              </label>
+              {usarHorario && (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Hora inicial</label>
+                    <input type="time" value={horaIni} onChange={e => setHoraIni(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Hora final</label>
+                    <input type="time" value={horaFim} onChange={e => setHoraFim(e.target.value)}
+                      className="px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  </div>
+                </>
+              )}
+              <p className="text-[10px] text-gray-400 pb-1.5">📅 {inicio.toLocaleString('pt-BR')} → {fim.toLocaleString('pt-BR')}</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 self-center">🔍 Granularidade:</span>
+            {(['hora', 'dia', 'semana', 'mes'] as Granularidade[]).map(g => (
+              <button key={g} onClick={() => setGranularidade(g)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+                  granularidade === g ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+                }`}>
+                {g === 'hora' ? '⏰ Hora' : g === 'dia' ? '📅 Dia' : g === 'semana' ? '🗓 Semana' : '📊 Mês'}
               </button>
             ))}
           </div>
@@ -431,10 +649,160 @@ ${vendasMes.length} vendas registradas
               <p className="text-amber-600 dark:text-amber-400">Vendas totais: {vendas.length}</p>
               <p className="text-amber-600 dark:text-amber-400">Vendas no período: {vendasNoPeriodo.length}</p>
               <p className="text-amber-600 dark:text-amber-400">Preços cadastrados: {precos.length}</p>
-              <p className="text-amber-600 dark:text-amber-400">Despesas no período: {despesas.filter(d => d.data >= inicio && d.data <= fim).length}</p>
-              <p className="text-amber-600 dark:text-amber-400">Período: {inicio} a {fim}</p>
+              <p className="text-amber-600 dark:text-amber-400">Despesas no período: {despesas.filter(d => d.data >= inicioStr.slice(0, 10) && d.data <= fimStr.slice(0, 10)).length}</p>
+              <p className="text-amber-600 dark:text-amber-400">Período: {inicio.toLocaleString('pt-BR')} a {fim.toLocaleString('pt-BR')}</p>
               {precos.length === 0 && <p className="text-red-500 font-semibold">⚠️ Nenhum preço cadastrado! Vá em Estoque &gt; Preços.</p>}
               {vendas.length === 0 && <p className="text-amber-600">📌 Nenhuma venda registrada ainda. Faça uma venda no PDV.</p>}
+            </div>
+          )}
+
+          {/* 💰 Lucro por Produto (completo, ordenável) */}
+          {lucroPorProduto.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">💰 Lucro por Produto ({periodoLabel})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 dark:bg-gray-800/50">
+                    <tr>
+                      <th className="text-left px-2 py-2 font-semibold text-gray-600 dark:text-gray-400">Produto</th>
+                      {([['qtd', 'Qtd'], ['receita', 'Receita'], ['lucro', 'Lucro'], ['margem', 'Margem']] as const).map(([k, label]) => (
+                        <th key={k} onClick={() => { if (sortLucroProd === k) setSortDir(d => d === 'desc' ? 'asc' : 'desc'); else { setSortLucroProd(k); setSortDir('desc') } }}
+                          className="text-right px-2 py-2 font-semibold text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none">
+                          {label} {sortLucroProd === k && (sortDir === 'desc' ? '▼' : '▲')}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {lucroPorProduto.map(p => (
+                      <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                        <td className="px-2 py-2 text-gray-800 dark:text-gray-200 truncate max-w-[200px]">{p.nome}</td>
+                        <td className="px-2 py-2 text-right text-gray-600 dark:text-gray-400">{p.qtd} {p.unidade}</td>
+                        <td className="px-2 py-2 text-right text-green-600 dark:text-green-400">R$ {p.receita.toFixed(2)}</td>
+                        <td className={`px-2 py-2 text-right font-bold ${p.lucro >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>R$ {p.lucro.toFixed(2)}</td>
+                        <td className={`px-2 py-2 text-right font-medium ${p.margem >= 30 ? 'text-green-600' : p.margem >= 10 ? 'text-yellow-600' : 'text-red-600'}`}>{p.margem.toFixed(0)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ⏰ Análise por Horário (vendas agrupadas por hora do dia) */}
+          {porHorario.some(b => b.receita > 0) && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">⏰ Análise por Horário ({periodoLabel})</h3>
+              <p className="text-[10px] text-gray-400 mb-2">Em qual horário do dia você vende mais? Quanto cada hora rende?</p>
+              <div className="flex items-end gap-px h-28">
+                {porHorario.map(b => {
+                  const altura = maxHorario > 0 ? (b.receita / maxHorario) * 100 : 0
+                  return (
+                    <div key={b.hora} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                      {b.receita > 0 && (
+                        <div className="w-full bg-gradient-to-t from-indigo-500 to-blue-400 dark:from-indigo-600 dark:to-blue-500 rounded-t-sm transition-all group-hover:from-indigo-600 group-hover:to-blue-500"
+                          style={{ height: `${altura}%`, minHeight: 4 }} title={`${b.hora}h — R$ ${b.receita.toFixed(2)}`} />
+                      )}
+                      {b.hora % 3 === 0 && <span className="text-[8px] text-gray-400 mt-1">{b.hora}h</span>}
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                {(() => {
+                  const buckets = [{ label: 'Madrugada (0-5h)', ini: 0, fim: 5 }, { label: 'Manhã (6-11h)', ini: 6, fim: 11 }, { label: 'Tarde (12-17h)', ini: 12, fim: 17 }, { label: 'Noite (18-23h)', ini: 18, fim: 23 }]
+                  return buckets.map(b => {
+                    const total = porHorario.filter(h => h.hora >= b.ini && h.hora <= b.fim).reduce((s, h) => s + h.receita, 0)
+                    const lucro = porHorario.filter(h => h.hora >= b.ini && h.hora <= b.fim).reduce((s, h) => s + h.lucro, 0)
+                    return (
+                      <div key={b.label} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">{b.label}</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200">R$ {total.toFixed(2)}</p>
+                        <p className={`text-[10px] ${lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>lucro R$ {lucro.toFixed(2)}</p>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* 📅 Análise por Granularidade (dia/semana/mês) */}
+          {porGranularidade.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">📅 Análise por {granularidade === 'hora' ? 'Hora' : granularidade === 'dia' ? 'Dia' : granularidade === 'semana' ? 'Semana' : 'Mês'}</h3>
+              <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="text-left px-2 py-2 font-semibold text-gray-600 dark:text-gray-400">Período</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 dark:text-gray-400">Transações</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 dark:text-gray-400">Receita</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 dark:text-gray-400">Custo</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 dark:text-gray-400">Lucro</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 dark:text-gray-400 hidden sm:table-cell">% do total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {porGranularidade.map(g => {
+                      const pct = porGranularidade.reduce((s, x) => s + x.receita, 0) > 0 ? (g.receita / porGranularidade.reduce((s, x) => s + x.receita, 0)) * 100 : 0
+                      return (
+                        <tr key={g.chave} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                          <td className="px-2 py-2 text-gray-800 dark:text-gray-200 capitalize">{labelGranularidade(g.dataRef)}</td>
+                          <td className="px-2 py-2 text-right text-gray-600 dark:text-gray-400">{g.transacoes}</td>
+                          <td className="px-2 py-2 text-right text-green-600 dark:text-green-400 font-medium">R$ {g.receita.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right text-orange-600 dark:text-orange-400">R$ {g.custo.toFixed(2)}</td>
+                          <td className={`px-2 py-2 text-right font-bold ${g.lucro >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>R$ {g.lucro.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right hidden sm:table-cell">
+                            <div className="inline-flex items-center gap-1.5">
+                              <div className="w-12 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[10px] text-gray-500 w-9 text-right">{pct.toFixed(0)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot className="sticky bottom-0 bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <td className="px-2 py-2 font-bold text-gray-700 dark:text-gray-300 text-xs">TOTAL</td>
+                      <td className="px-2 py-2 text-right text-xs font-bold text-gray-800 dark:text-gray-200">{porGranularidade.reduce((s, g) => s + g.transacoes, 0)}</td>
+                      <td className="px-2 py-2 text-right text-xs font-bold text-green-600 dark:text-green-400">R$ {porGranularidade.reduce((s, g) => s + g.receita, 0).toFixed(2)}</td>
+                      <td className="px-2 py-2 text-right text-xs font-bold text-orange-600 dark:text-orange-400">R$ {porGranularidade.reduce((s, g) => s + g.custo, 0).toFixed(2)}</td>
+                      <td className="px-2 py-2 text-right text-xs font-bold text-gray-800 dark:text-gray-200">R$ {porGranularidade.reduce((s, g) => s + g.lucro, 0).toFixed(2)}</td>
+                      <td className="px-2 py-2 text-right text-xs text-gray-400 hidden sm:table-cell">100%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 🗑️ Perdas Detalhadas */}
+          {perdasDetalhadas.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">🗑️ Perdas Detalhadas ({periodoLabel})</h3>
+              <p className="text-[10px] text-gray-400 mb-3">Total: <strong className="text-red-600">{perdasLogsNoPeriodo.length} registro(s)</strong> · valor perdido: <strong className="text-red-600">R$ {perdasNoPeriodo.toFixed(2)}</strong></p>
+              <div className="space-y-2">
+                {perdasDetalhadas.map(p => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 p-2.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{p.nome}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Object.entries(p.motivos).map(([m, n]) => (
+                          <span key={m} className="text-[10px] bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">{MOTIVOS_PERDA_LABELS[m] || m} ×{n}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-orange-600 dark:text-orange-400">{p.qtd} un</p>
+                      {p.valor > 0 && <p className="text-[10px] text-gray-500">R$ {p.valor.toFixed(2)} perdidos</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </>
