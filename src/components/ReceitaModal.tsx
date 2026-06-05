@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { ItemEstoque, UnidadeMedida, Receita } from '../types'
 import { useReceita } from '../context/ReceitaContext'
 import { usePreco } from '../context/PrecoContext'
@@ -8,8 +8,6 @@ interface Props {
   item: ItemEstoque
   onClose: () => void
 }
-
-const UNIDADES_PADRAO: UnidadeMedida[] = ['L', 'mL', 'g', 'kg', 'un', 'cx', 'pct', 'fardo']
 
 export default function ReceitaModal({ item, onClose }: Props) {
   const { getReceitaByProduto, salvarReceita, removerReceita, calcularCusto } = useReceita()
@@ -22,10 +20,14 @@ export default function ReceitaModal({ item, onClose }: Props) {
   const [itens, setItens] = useState<{ itemId: string; quantidade: number }[]>(receitaExistente?.itens.map(i => ({ itemId: i.itemId, quantidade: i.quantidade })) || [])
   const [rendimento, setRendimento] = useState(receitaExistente?.rendimento || 1)
   const [busca, setBusca] = useState('')
+  const [dropdownAberto, setDropdownAberto] = useState(false)
   const [salvo, setSalvo] = useState('')
+  const buscaRef = useRef<HTMLInputElement>(null)
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const ultimoAdicionadoRef = useRef<string | null>(null)
 
   const candidatos = useMemo(() => {
-    const lower = busca.toLowerCase()
+    const lower = busca.toLowerCase().trim()
     return todosItens
       .filter(i => i.id !== item.id)
       .filter(i => !itens.some(it => it.itemId === i.id))
@@ -44,9 +46,26 @@ export default function ReceitaModal({ item, onClose }: Props) {
   }, [itens, rendimento, nome, item.id, calcularCusto])
   const custoUnitarioFinal = rendimento > 0 ? custoReceita / rendimento : custoReceita
 
+  useEffect(() => {
+    if (ultimoAdicionadoRef.current) {
+      const el = itemRefs.current.get(ultimoAdicionadoRef.current)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const input = el.querySelector('input[type="number"]') as HTMLInputElement | null
+        if (input) {
+          input.focus()
+          input.select()
+        }
+      }
+      ultimoAdicionadoRef.current = null
+    }
+  }, [itens])
+
   function addItem(itemId: string) {
     setItens(prev => [...prev, { itemId, quantidade: 1 }])
     setBusca('')
+    setDropdownAberto(false)
+    ultimoAdicionadoRef.current = itemId
   }
 
   function removerItem(itemId: string) {
@@ -97,7 +116,7 @@ export default function ReceitaModal({ item, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 animate-fadeIn" onClick={onClose}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white dark:bg-gray-900 px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between z-30">
           <div>
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">📋 Receita de {item.nome}</h2>
             <p className="text-xs text-gray-400 mt-0.5">Cadastre os ingredientes para calcular o custo automaticamente.</p>
@@ -118,34 +137,61 @@ export default function ReceitaModal({ item, onClose }: Props) {
 
           <div>
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">🧪 Ingredientes</h3>
-            <p className="text-xs text-gray-400 mb-2">Adicione as matérias-primas que são consumidas para produzir 1 lote.</p>
-            <div className="relative mb-2">
-              <input type="text" value={busca} onChange={e => setBusca(e.target.value)}
+            <p className="text-xs text-gray-400 mb-2">Busque e adicione as matérias-primas. Ajuste a quantidade no card que aparece abaixo.</p>
+
+            <div className="relative mb-3">
+              <input ref={buscaRef} type="text" value={busca}
+                onFocus={() => setDropdownAberto(true)}
+                onBlur={() => setTimeout(() => setDropdownAberto(false), 150)}
+                onChange={e => { setBusca(e.target.value); setDropdownAberto(true) }}
                 placeholder="🔍 Buscar ingrediente..."
                 className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-              {candidatos.length > 0 && (
-                <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+              {dropdownAberto && candidatos.length > 0 && (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                   {candidatos.map(c => (
-                    <button key={c.id} onClick={() => addItem(c.id)}
-                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
-                      <span className="font-medium text-gray-800 dark:text-gray-200">{c.nome}</span>
-                      <span className="text-xs text-gray-400">{c.quantidadeAtual} {c.unidade} · R$ {custoUnitario(c.id).toFixed(2)}/{c.unidade}</span>
+                    <button key={c.id} onMouseDown={e => e.preventDefault()} onClick={() => addItem(c.id)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-left border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-gray-800 dark:text-gray-200 block truncate">{c.nome}</span>
+                        <span className="text-[10px] text-gray-400">{c.categoria.replace(/_/g, ' ')}</span>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="text-[10px] text-gray-500">R$ {custoUnitario(c.id).toFixed(2)}/{c.unidade}</p>
+                        <p className="text-[10px] text-gray-400">estoque: {c.quantidadeAtual} {c.unidade}</p>
+                      </div>
                     </button>
                   ))}
                 </div>
               )}
+              {dropdownAberto && busca.trim() && candidatos.length === 0 && (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-3 text-center text-xs text-gray-400">
+                  Nenhum ingrediente encontrado para "{busca}"
+                </div>
+              )}
             </div>
+
             {itens.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-2 relative z-10">
                 {itens.map(i => (
-                  <div key={i.itemId} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">{getNome(i.itemId)}</span>
-                    <input type="number" value={i.quantidade} min={0.01} step={0.1}
-                      onChange={e => alterarQtd(i.itemId, Number(e.target.value))}
-                      className="w-20 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-center" />
-                    <span className="text-xs text-gray-400 w-8">{getUnidade(i.itemId)}</span>
-                    <span className="text-xs text-gray-500 w-20 text-right">R$ {(custoUnitario(i.itemId) * i.quantidade).toFixed(2)}</span>
-                    <button onClick={() => removerItem(i.itemId)} className="text-red-400 hover:text-red-600 text-sm">✕</button>
+                  <div key={i.itemId}
+                    ref={el => { if (el) itemRefs.current.set(i.itemId, el) }}
+                    className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30 border border-indigo-200 dark:border-indigo-900 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{getNome(i.itemId)}</p>
+                      <p className="text-[10px] text-gray-500">R$ {custoUnitario(i.itemId).toFixed(2)}/{getUnidade(i.itemId)}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">qtd:</span>
+                      <input type="number" value={i.quantidade} min={0.01} step={0.1}
+                        onChange={e => alterarQtd(i.itemId, Number(e.target.value))}
+                        className="w-24 px-2 py-1.5 text-sm font-bold border-2 border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                      <span className="text-xs text-gray-500 w-10">{getUnidade(i.itemId)}</span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] text-gray-500">subtotal</p>
+                      <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">R$ {(custoUnitario(i.itemId) * i.quantidade).toFixed(2)}</p>
+                    </div>
+                    <button onClick={() => removerItem(i.itemId)} title="Remover ingrediente" className="shrink-0 w-7 h-7 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500 rounded transition-colors">✕</button>
                   </div>
                 ))}
               </div>
